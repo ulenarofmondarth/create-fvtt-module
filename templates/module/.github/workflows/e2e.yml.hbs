@@ -1,0 +1,123 @@
+name: E2E
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-$\{{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # The exact Foundry VTT build under test. Keep in step with tests/e2e/compose.yaml and .foundryvtt/.env.
+  FOUNDRY_VERSION: {{{foundryVersion}}}
+
+jobs:
+  e2e:
+    name: Playwright ($\{{ matrix.browser }})
+    # Pull requests from forks have no access to the Foundry licence secrets.
+    if: $\{{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      # One Foundry licence may only run one server at a time.
+      max-parallel: 1
+      matrix:
+        browser:
+          - chromium
+          - firefox
+          - webkit
+    env:
+      FOUNDRY_USERNAME: $\{{ secrets.FOUNDRY_USERNAME }}
+      FOUNDRY_PASSWORD: $\{{ secrets.FOUNDRY_PASSWORD }}
+      FOUNDRY_LICENSE_KEY: $\{{ secrets.FOUNDRY_LICENSE_KEY }}
+      FOUNDRY_ADMIN_KEY: $\{{ secrets.FOUNDRY_ADMIN_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+
+      - name: Build the module
+        run: pnpm build
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-$\{{ runner.os }}-$\{{ matrix.browser }}-$\{{ hashFiles('pnpm-lock.yaml') }}
+
+      # The world bootstrap always runs in Chromium, whichever browser the specs run in.
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium $\{{ matrix.browser }}
+
+      - name: Cache the Foundry VTT server download
+        uses: actions/cache@v6
+        with:
+          path: tests/e2e/.data/container_cache
+          key: foundry-server-$\{{ env.FOUNDRY_VERSION }}
+
+      - name: Cache the pinned system and module
+        uses: actions/cache@v6
+        with:
+          path: |
+            tests/e2e/.data/Data/systems
+            tests/e2e/.data/Data/modules
+          key: foundry-packages-$\{{ hashFiles('scripts/e2e/install-packages.ts') }}
+
+      - name: Install the pinned system and module
+        run: pnpm run e2e:packages
+
+      - name: Start Foundry VTT
+        run: |
+          export FOUNDRY_UID="$(id -u)" FOUNDRY_GID="$(id -g)"
+          docker compose -f tests/e2e/compose.yaml up --detach --wait --wait-timeout 300
+
+      - name: Run Playwright
+        run: pnpm run test:e2e --project=$\{{ matrix.browser }}
+
+      - name: Foundry VTT logs
+        if: $\{{ failure() }}
+        run: docker compose -f tests/e2e/compose.yaml logs --no-color --tail 200
+
+      - name: Stop Foundry VTT
+        if: $\{{ always() }}
+        run: docker compose -f tests/e2e/compose.yaml down
+
+      # The HTML report, plus traces, screenshots and videos of failed tests.
+      - name: Upload Playwright report
+        if: $\{{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-$\{{ matrix.browser }}
+          path: |
+            tests/e2e/playwright-report/
+            tests/e2e/test-results/
+          if-no-files-found: ignore
+
+  comment:
+    name: Comment on the pull request
+    needs: e2e
+    if: $\{{ !cancelled() && github.event_name == 'pull_request' && needs.e2e.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Post the result
+        env:
+          GH_TOKEN: $\{{ github.token }}
+          RESULT: $\{{ needs.e2e.result }}
+          RUN_URL: $\{{ github.server_url }}/$\{{ github.repository }}/actions/runs/$\{{ github.run_id }}
+        run: |
+          if [ "$RESULT" = "success" ]; then
+            body="✅ End-to-end tests passed in Chromium, Firefox and WebKit against Foundry VTT ${FOUNDRY_VERSION}."
+          else
+            body="❌ End-to-end tests finished with result: ${RESULT} (Foundry VTT ${FOUNDRY_VERSION})."
+          fi
+          gh pr comment "$\{{ github.event.pull_request.number }}" --repo "$\{{ github.repository }}" \
+            --edit-last --create-if-none \
+            --body "${body} Playwright reports are attached to [the workflow run](${RUN_URL})."

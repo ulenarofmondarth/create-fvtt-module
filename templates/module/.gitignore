@@ -1,0 +1,17 @@
+.vite
+module.zip
+.idea
+.DS_Store
+.vite-cache/
+.vscode/**/*
+!.vscode/extensions.json
+_build/
+dist/
+coverage/
+releases/
+tests/e2e/.data/
+tests/e2e/test-results/
+tests/e2e/playwright-report/
+node_modules/
+.foundryvtt/data/
+.foundryvtt/secrets.json

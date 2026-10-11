@@ -1,0 +1,81 @@
+# Setup
+
+Once the [](prerequisites.md) are installed setup is simple enough.
+
+```sh
+git clone {{{repoUrl}}}.git
+cd {{{repoName}}}
+pnpm install
+```
+
+`pnpm install` also installs the git hooks. The checks, commit message rules and release process are described in
+`CONTRIBUTING.md`.
+
+## Running a development Foundry VTT
+
+The compose file in `.foundryvtt/` runs the pinned Foundry VTT release (`VERSION` in `.foundryvtt/.env`) with this
+project mounted as the `{{{moduleId}}}` module.
+
+1. Copy `.foundryvtt/secrets.example.json` to `.foundryvtt/secrets.json` and fill in your foundryvtt.com credentials,
+   your licence key and an admin password for the server. The file is ignored by {program}`git`.
+2. Build the module once, so that Foundry finds the bundle named in `module.json`:
+
+   ```sh
+   pnpm build
+   ```
+
+3. Start Foundry VTT on <http://localhost:30000>:
+
+   ```sh
+   pnpm serve:vtt
+   ```
+
+4. Start the \{{HMR}} development server:
+
+   ```sh
+   pnpm dev
+   ```
+
+   Open <http://localhost:31002> rather than port 30000. The development server serves the module straight from `src/`
+   and passes everything else on to Foundry VTT. To reach it under another host name, list the name in the
+   `VITE_ALLOWED_HOSTS` environment variable (comma-separated).
+
+## The module manifest
+
+`module.json` was filled in when the project was generated. Review:
+
+`title` and `description`
+: These appear on Foundry's Add-on Modules page. Keep the description short.
+
+`authors`
+: Provide at least one author entry.
+
+`compatibility`
+: Which versions of Foundry this module is compatible with.
+
+`relationships`
+: Any game systems and modules this module requires.
+
+You may also need to set various other values in `module.json` (e.g. `socket` if your module uses sockets), but
+these will vary widely according to what your module does.
+
+If you use {program}`github` for your versioning and distribution then you can leave the following entries alone and
+the release workflow will maintain them for you. (Otherwise, see [](#replacing-github).)
+
+- `version`
+- `manifest`
+- `download`
+
+## Repository settings
+
+The workflows in `.github/workflows` need:
+
+`PERSONAL_ACCESS_TOKEN`
+: A repository secret holding a token that may push to `main`; the release workflow commits the changelog and the
+  stamped `module.json` with it.
+
+`FOUNDRY_USERNAME`, `FOUNDRY_PASSWORD`, `FOUNDRY_LICENSE_KEY` and `FOUNDRY_ADMIN_KEY`
+: Repository secrets used by the end-to-end tests to download and license a Foundry VTT server.
+
+GitHub Pages
+: Set to deploy from the `gh-pages` branch, which the documentation workflow maintains.

@@ -1,0 +1,117 @@
+import { vi } from 'vitest';
+
+type AnyHookFunction = (...args: never[]) => unknown;
+
+interface RegisteredHook {
+  id: number;
+  name: string;
+  fn: AnyHookFunction;
+  once: boolean;
+}
+
+/**
+ * A small working stand-in for Foundry's `Hooks`, typed against the real signatures so drift is caught at compile time.
+ * @returns The mock, plus `run` to trigger a hook from a test
+ */
+export function createHooksMock() {
+  let nextId = 1;
+  let registered: RegisteredHook[] = [];
+
+  const on = vi.fn((name: Hooks.HookName, fn: AnyHookFunction, options?: Hooks.OnOptions): number => {
+    const id = nextId++;
+    registered.push({ id, name, fn, once: options?.once ?? false });
+    return id;
+  });
+
+  const once = vi.fn((name: Hooks.HookName, fn: AnyHookFunction): number => on(name, fn, { once: true }));
+
+  const off = vi.fn((name: Hooks.HookName, target: number | AnyHookFunction): void => {
+    registered = registered.filter(hook => hook.name !== name || (hook.id !== target && hook.fn !== target));
+  });
+
+  /**
+   * Call every callback registered for `name`, removing those registered with `once`.
+   * @param name - The hook to trigger
+   * @param args - Arguments passed to each callback
+   */
+  const run = (name: Hooks.HookName, ...args: unknown[]): void => {
+    const matching = registered.filter(hook => hook.name === name);
+    registered = registered.filter(hook => hook.name !== name || !hook.once);
+    for (const hook of matching) (hook.fn as (...hookArgs: unknown[]) => unknown)(...args);
+  };
+
+  const callAll = vi.fn((name: Hooks.HookName, ...args: unknown[]): true => {
+    run(name, ...args);
+    return true;
+  });
+
+  return { on, once, off, callAll, run };
+}
+
+export interface GameMockOptions {
+  /** Whether the current user is a GM; `null` leaves `game.user` unset, as it is during `init`. */
+  isGM?: boolean | null;
+  /** Modules known to `game.modules`, keyed by ID. */
+  modules?: Record<string, { active: boolean; title?: string; api?: unknown }>;
+  /** Initial stored setting values, keyed by `namespace.key`. */
+  settings?: Record<string, unknown>;
+}
+
+/**
+ * Create a stand-in for the parts of `game` that {{{moduleTitle}}} uses. Extend it as the module touches more of Foundry.
+ * @param options - Initial state
+ * @returns The mock `game`
+ */
+export function createGameMock(options: GameMockOptions = {}) {
+  const { isGM = true, modules = {}, settings = {} } = options;
+  const stored = new Map<string, unknown>(Object.entries(settings));
+  const defaults = new Map<string, unknown>();
+
+  return {
+    user: isGM === null ? null : { isGM },
+    modules: new Map(Object.entries(modules)),
+    settings: {
+      register: vi.fn((namespace: string, key: string, data: { default?: unknown }): void => {
+        defaults.set(`${namespace}.${key}`, data.default);
+      }),
+      get: vi.fn((namespace: string, key: string): unknown => {
+        const id = `${namespace}.${key}`;
+        return stored.has(id) ? stored.get(id) : defaults.get(id);
+      }),
+      set: vi.fn((namespace: string, key: string, value: unknown): Promise<unknown> => {
+        stored.set(`${namespace}.${key}`, value);
+        return Promise.resolve(value);
+      }),
+    },
+    i18n: {
+      localize: vi.fn((key: string): string => key),
+      format: vi.fn((key: string, data: Record<string, string> = {}): string => `${key} ${JSON.stringify(data)}`),
+    },
+  };
+}
+
+export interface FoundryMockOptions extends GameMockOptions {
+  /** Value of `CONFIG.debug.hooks`. */
+  debugHooks?: boolean;
+}
+
+/**
+ * Install mock Foundry globals (`Hooks`, `game`, `ui`, `CONFIG`) for the current test.
+ * Undo with `vi.unstubAllGlobals()`.
+ * @param options - Initial state
+ * @returns Handles to the installed mocks
+ */
+export function installFoundryMocks(options: FoundryMockOptions = {}) {
+  const { debugHooks = false, ...gameOptions } = options;
+  const hooks = createHooksMock();
+  const game = createGameMock(gameOptions);
+  const ui = { notifications: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } };
+  const config = { debug: { hooks: debugHooks } };
+
+  vi.stubGlobal('Hooks', hooks);
+  vi.stubGlobal('game', game);
+  vi.stubGlobal('ui', ui);
+  vi.stubGlobal('CONFIG', config);
+
+  return { hooks, game, ui, config };
+}

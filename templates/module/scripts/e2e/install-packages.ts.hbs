@@ -1,0 +1,87 @@
+#!/usr/bin/env node
+
+/**
+ * Install the pinned game system (and any modules) that {{{moduleTitle}}} is tested with into the end-to-end test data
+ * directory.
+ *
+ * Usage: `node scripts/e2e/install-packages.ts`
+ */
+
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+const ROOT = path.resolve(import.meta.dirname, '../..');
+const DATA = path.join(ROOT, 'tests/e2e/.data/Data');
+
+interface PinnedPackage {
+  /** Directory under the Foundry user data folder: `systems` or `modules`. */
+  type: 'systems' | 'modules';
+  id: string;
+  /** The manifest file that marks the package root inside the archive. */
+  manifest: 'system.json' | 'module.json';
+  url: string;
+}
+
+/** Bump these deliberately; the end-to-end tests run against exactly these builds. */
+const PACKAGES: PinnedPackage[] = [
+  {
+    type: 'systems',
+    id: {{{ts systemId}}},
+    manifest: 'system.json',
+    url: {{{ts systemUrl}}},
+  },
+];
+
+/**
+ * Find the directory inside an extracted archive that holds the package manifest: the archive root, or a single
+ * top-level folder.
+ * @param extracted - Directory the archive was extracted into
+ * @param manifest - Manifest file name to look for
+ * @returns The package root directory
+ */
+function findPackageRoot(extracted: string, manifest: string): string {
+  if (fs.existsSync(path.join(extracted, manifest))) return extracted;
+
+  const nested = fs
+    .readdirSync(extracted, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && fs.existsSync(path.join(extracted, entry.name, manifest)));
+  const [only] = nested;
+  if (nested.length !== 1 || !only) throw new Error(`Could not find ${manifest} in the archive`);
+
+  return path.join(extracted, only.name);
+}
+
+/**
+ * Download and unpack one package, unless it is already installed.
+ * @param pinned - The package to install
+ */
+async function install(pinned: PinnedPackage): Promise<void> {
+  const target = path.join(DATA, pinned.type, pinned.id);
+  if (fs.existsSync(path.join(target, pinned.manifest))) {
+    console.log(`${pinned.id}: already installed`);
+    return;
+  }
+
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), `{{{moduleId}}}-e2e-${pinned.id}-`));
+  try {
+    const archive = path.join(work, 'package.zip');
+    const extracted = path.join(work, 'extracted');
+
+    const response = await fetch(pinned.url);
+    if (!response.ok) throw new Error(`Download of ${pinned.url} failed: ${response.status} ${response.statusText}`);
+    fs.writeFileSync(archive, Buffer.from(await response.arrayBuffer()));
+
+    fs.mkdirSync(extracted);
+    execFileSync('unzip', ['-q', archive, '-d', extracted], { stdio: 'inherit' });
+
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.cpSync(findPackageRoot(extracted, pinned.manifest), target, { recursive: true });
+    console.log(`${pinned.id}: installed from ${pinned.url}`);
+  } finally {
+    fs.rmSync(work, { recursive: true, force: true });
+  }
+}
+
+for (const pinned of PACKAGES) await install(pinned);

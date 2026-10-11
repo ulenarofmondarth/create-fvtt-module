@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+# A newer push to the same pull request supersedes the run in progress; runs on main are never cancelled.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm typecheck
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      # ESLint also reports Prettier formatting for scripts; the second step covers the remaining file types.
+      - run: pnpm exec eslint . --max-warnings 0
+      - run: pnpm exec prettier --check "**/*.{json,css,scss,md,yml,yaml}"
+
+  svelte-check:
+    name: Svelte check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      # svelte-check warns (and so fails) when the project has no components at all, so only run it once one exists.
+      - name: Run svelte-check
+        if: ${{ hashFiles('src/**/*.svelte') != '' }}
+        run: pnpm run svelte-check
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      # Fails when coverage drops below the thresholds in vite.config.ts.
+      - run: pnpm run test:coverage
+      - name: Upload coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - name: Upload bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: module-bundle
+          path: |
+            dist/
+            module.json
+          if-no-files-found: error
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Python tooling stays inside the image built from docs/Dockerfile; nothing is installed on the runner.
+      - name: Build documentation
+        run: docker compose run --rm --user "$(id -u):$(id -g)" docs make html
+      - name: Upload documentation
+        uses: actions/upload-artifact@v7
+        with:
+          name: documentation
+          path: docs/_build/html/
+          if-no-files-found: error

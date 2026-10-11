@@ -1,0 +1,195 @@
+import { svelte } from '@sveltejs/vite-plugin-svelte';
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { sveltePreprocess } from 'svelte-preprocess';
+
+import autoprefixer from 'autoprefixer';
+import dts from 'unplugin-dts/vite';
+
+import moduleJSON from './module.json' with { type: 'json' };
+
+import tsconfigPaths from 'vite-tsconfig-paths';
+import type { Plugin } from 'vite';
+import { defineConfig } from 'vitest/config';
+
+const PORTS = {
+  base: 30000,
+  dev: 31002,
+};
+
+const s_PACKAGE_ID = `modules/${moduleJSON.id}`;
+
+// A short additional string to add to Svelte CSS hash values to make yours unique. This reduces the amount of
+// duplicated framework CSS overlap between many Svelte packages enabled on Foundry VTT at the same time.
+const s_SVELTE_HASH_ID = {{{ts svelteHashId}}};
+
+const s_COMPRESS = false as boolean; // Set to true to compress the module bundle.
+const s_SOURCEMAPS = true; // Generate sourcemaps for the bundle (recommended).
+
+// Extra host names the dev server answers to, comma-separated in VITE_ALLOWED_HOSTS (e.g. a remote development machine).
+const s_ALLOWED_HOSTS = (process.env.VITE_ALLOWED_HOSTS ?? '')
+  .split(',')
+  .map(host => host.trim())
+  .filter(Boolean);
+
+/**
+ * Copy the localization files from `src/lang` into `dist/lang`, where `module.json` expects them.
+ * @returns A Vite plugin
+ */
+function copyLang(): Plugin {
+  const langDir = path.resolve(__dirname, 'src/lang');
+
+  return {
+    name: {{{ts (concat moduleId ':copy-lang')}}},
+    apply: 'build',
+    generateBundle() {
+      for (const file of fs.readdirSync(langDir)) {
+        const source = path.join(langDir, file);
+        this.addWatchFile(source);
+        this.emitFile({ type: 'asset', fileName: `lang/${file}`, source: fs.readFileSync(source) });
+      }
+    },
+  };
+}
+
+// Proxy options for requests forwarded to the main Foundry server. The string shorthand (`'/path': 'http://target'`)
+// implies `changeOrigin: true`, which rewrites the `Host` header to the target. Foundry rejects form posts (e.g. the
+// admin password on `/auth`) with a 400 when the `Origin` and `Host` hostnames differ, so anything other than
+// `localhost` in the browser's address bar would fail. Keep the browser's `Host` header intact instead.
+const foundryProxy = { target: `http://localhost:${PORTS.base}`, changeOrigin: false };
+
+export default defineConfig(({ mode }) => {
+  // Provides a custom hash adding the string defined in `s_SVELTE_HASH_ID` to scoped Svelte styles;
+  // This is reasonable to do as the framework styles in TRL compiled across `n` different packages will
+  // be the same. Slightly modifying the hash ensures that your package has uniquely scoped styles for all
+  // TRL components and makes it easier to review styles in the browser debugger.
+  const compilerOptions =
+    mode === 'production'
+      ? {
+          cssHash: ({ hash, css }: { hash: (input: string) => string; css: string }) =>
+            `svelte-${s_SVELTE_HASH_ID}-${hash(css)}`,
+        }
+      : {};
+
+  return {
+    root: 'src/', // Source location / esbuild root.
+    base: `/${s_PACKAGE_ID}/dist`, // Base module path that 30001 / served dev directory.
+    publicDir: false, // No public resources to copy.
+    cacheDir: '../.vite-cache', // Relative from root directory.
+    test: {
+      include: ['**/*.{test,spec}.?(c|m)[jt]s?(x)', '../tests/unit/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
+      environment: 'happy-dom',
+      restoreMocks: true,
+      unstubGlobals: true,
+      coverage: {
+        provider: 'v8',
+        include: ['index.ts', 'module/**/*.ts', 'component/**/*.svelte'],
+        reportsDirectory: '../coverage',
+        reporter: ['text', 'html', 'lcov'],
+        // Ratchet these upward as coverage improves; never lower them to make a change pass.
+        thresholds: { statements: 95, branches: 90, functions: 100, lines: 95 },
+      },
+      includeSource: ['**/*.{ts,js}'],
+    },
+    define: {
+      'import.meta.vitest': false,
+    },
+
+    resolve: {
+      conditions: ['browser', 'import'],
+      alias: {
+        '@module': path.resolve(__dirname, 'src/module/'),
+      },
+    },
+
+    esbuild: {
+      target: ['es2022'],
+    },
+
+    css: {
+      postcss: { plugins: [autoprefixer], inject: false, sourceMap: s_SOURCEMAPS },
+    },
+
+    // About server options:
+    // - Set to `open` to boolean `false` to not open a browser window automatically. This is useful if you set up a
+    // debugger instance in your IDE and launch it with the URL: 'http://localhost:30001/game'.
+    //
+    // - The top proxy entry redirects requests under the module path for the built stylesheet and the static
+    // directories kept at the project root (`assets` and `packs`) and pulls those resources from the main Foundry
+    // server. This is necessary as the root is `/src` and there are no public / static resources served with this
+    // particular Vite configuration. Modify the proxy rule as necessary for your static resources / project.
+    //
+    // - Static content that lives in `src/` (currently `lang`) must NOT be proxied: `module.json` references it under
+    // `dist/` (e.g. `dist/lang/en.json`), which `base` maps onto `src/`, so the dev server serves it live from source
+    // rather than from a possibly stale build in `dist/`.
+    server: {
+      port: PORTS.dev,
+      host: true,
+      allowedHosts: s_ALLOWED_HOSTS,
+      // open: '/game',
+      proxy: {
+        // Serves root-level static files and the built stylesheet from main Foundry server.
+        [`^(/${s_PACKAGE_ID}/(assets|packs|dist/${moduleJSON.id}.css))`]: foundryProxy,
+
+        // All other paths besides package ID path are served from main Foundry server.
+        [`^(?!/${s_PACKAGE_ID}/)`]: foundryProxy,
+
+        // Rewrite incoming `module-id.js` request from Foundry to the dev server `index.js`.
+        [`/${s_PACKAGE_ID}/dist/${moduleJSON.id}.js`]: {
+          target: `http://localhost:${PORTS.dev}/${s_PACKAGE_ID}/dist`,
+          rewrite: () => '/index.ts',
+        },
+
+        // Enable socket.io from main Foundry server.
+        '/socket.io': { target: `ws://localhost:${PORTS.base}`, ws: true },
+      },
+    },
+
+    build: {
+      outDir: '../dist',
+      emptyOutDir: false,
+      sourcemap: s_SOURCEMAPS,
+      minify: s_COMPRESS ? 'esbuild' : false,
+      target: ['es2022'],
+      lib: {
+        entry: './index.ts',
+        formats: ['es'],
+        fileName: moduleJSON.id,
+      },
+      rollupOptions: {
+        output: {
+          // Rewrite the default style.css to a more recognizable file name.
+          assetFileNames: assetInfo =>
+            assetInfo.names[0] === 'style.css' ? `${moduleJSON.id}.css` : '[name][extname]',
+        },
+      },
+    },
+
+    // Necessary when using the dev server for top-level await usage inside TRL.
+    optimizeDeps: {
+      esbuildOptions: {
+        target: 'es2022',
+      },
+    },
+
+    plugins: [
+      tsconfigPaths(),
+      copyLang(),
+      dts({
+        // Vite's root is `src/`; resolve the tsconfig and its `include` globs from the project root instead.
+        root: __dirname,
+        tsconfigPath: './tsconfig.json',
+        outDirs: path.resolve(__dirname, 'dist'),
+        afterBuild: emittedFiles => {
+          console.log('Emitted files:', [...emittedFiles.keys()]);
+        },
+        compilerOptions: { noEmitOnError: false },
+      }),
+      svelte({
+        compilerOptions,
+        preprocess: sveltePreprocess(),
+      }),
+    ],
+  };
+});

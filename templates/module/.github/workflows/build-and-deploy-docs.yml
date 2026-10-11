@@ -1,0 +1,43 @@
+name: Build and Deploy Docs
+on:
+  workflow_call:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+concurrency:
+  group: generate-docs
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # Always build the tip of main: when called from the release workflow this includes the release commit, which
+      # carries the version stamped into docs/conf.py.
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Build Documentation
+        run: |
+          docker compose run --rm --user "$(id -u):$(id -g)" docs make html
+          cd ./docs/_build/html
+          zip -r ${{ github.workspace }}/documentation-${{ github.ref_name }}.zip .
+
+      - name: Preserve Documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-${{ github.ref_name}}
+          path: ${{ github.workspace }}/documentation-${{ github.ref_name }}.zip
+
+      - name: Deploy Documentation
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/_build/html

@@ -1,0 +1,53 @@
+{
+  "id": {{{json moduleId}}},
+  "title": {{{json moduleTitle}}},
+  "version": "0.0.0",
+  "compatibility": {
+    "minimum": {{{json compatibilityMinimum}}},
+    "verified": {{{json compatibilityMinimum}}}
+  },
+{{#if restrictToSystem}}
+  "relationships": {
+    "systems": [
+      {
+        "id": {{{json systemId}}},
+        "type": "system",
+        "compatibility": {}
+      }
+    ]
+  },
+{{else}}
+  "relationships": {},
+{{/if}}
+  "esmodules": [{{{json (concat 'dist/' moduleId '.js')}}}],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "dist/lang/en.json"
+    }
+  ],
+  "authors": [
+    {
+      "name": {{{json authorName}}},
+{{#if authorEmail}}
+      "email": {{{json authorEmail}}},
+{{/if}}
+{{#if authorUrl}}
+      "url": {{{json authorUrl}}},
+{{/if}}
+{{#if authorDiscord}}
+      "discord": {{{json authorDiscord}}},
+{{/if}}
+      "flags": {}
+    }
+  ],
+  "description": {{{json description}}},
+  "flags": {},
+  "url": {{{json repoUrl}}},
+  "readme": {{{json (concat repoUrl '/blob/main/README.md')}}},
+  "bugs": {{{json (concat repoUrl '/issues')}}},
+  "changelog": {{{json (concat repoUrl '/releases/latest')}}},
+  "manifest": {{{json (concat repoUrl '/releases/latest/download/module.json')}}},
+  "download": {{{json (concat repoUrl '/releases/download/v0.0.0/module-v0.0.0.zip')}}}
+}

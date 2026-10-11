@@ -1,0 +1,67 @@
+name: Release
+
+# Runs only after the CI workflow has passed for a push to main.
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Release
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      published: ${{ steps.result.outputs.published }}
+    steps:
+      # Release exactly the commit CI passed on. If main has moved on since, semantic-release sees the checkout is
+      # behind and skips; the newer commit gets its own run.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - uses: ./.github/actions/setup
+
+      # semantic-release numbers a first release 1.0.0. A v0.0.0 tag on the first commit gives it a release to count
+      # from instead, so the first `feat` publishes 0.1.0. Only ever runs while the repository has no version tag.
+      - name: Start versioning at 0.x
+        run: |
+          if [ -z "$(git tag --list 'v*')" ]; then
+            git tag v0.0.0 "$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+            git push origin v0.0.0
+          fi
+
+      - name: Release
+        run: pnpm exec semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          HUSKY: 0
+
+      - name: Check whether a release was published
+        id: result
+        run: echo "published=$(git tag --points-at HEAD | grep -c '^v' || true)" >> "$GITHUB_OUTPUT"
+
+  docs:
+    name: Publish documentation
+    needs: release
+    if: ${{ needs.release.outputs.published != '0' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/build-and-deploy-docs.yml

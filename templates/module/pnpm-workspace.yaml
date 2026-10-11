@@ -1,0 +1,7 @@
+blockExoticSubdeps: false
+allowBuilds:
+  "@league-of-foundry-developers/foundry-vtt-types@https://codeload.github.com/League-of-Foundry-Developers/foundry-vtt-types/tar.gz/27bf7b9bac68a74a5346c7ca44432917d9f41bdb": true
+  "@parcel/watcher": true
+  esbuild: true
+  foundry-vtt-types: true
+  svelte-preprocess: true

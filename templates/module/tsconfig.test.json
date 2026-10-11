@@ -1,0 +1,9 @@
+{
+  // Unit and end-to-end tests are checked together with the module source so they see the Foundry types and local augmentations.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}

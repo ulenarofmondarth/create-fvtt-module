@@ -1,0 +1,11 @@
+# Tooling containers for development. The Foundry VTT dev server has its own compose file in .foundryvtt/.
+services:
+  # Sphinx documentation toolchain:
+  #   docker compose run --rm docs make html
+  #   docker compose run --rm --service-ports docs make livehtml
+  docs:
+    build: ./docs
+    volumes:
+      - ./docs:/docs
+    ports:
+      - "8000:8000"

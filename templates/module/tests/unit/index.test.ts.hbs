@@ -1,0 +1,46 @@
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+
+import type { FoundryMockOptions } from './mocks/foundry';
+import { installFoundryMocks } from './mocks/foundry';
+
+/**
+ * Install the Foundry mocks and load a fresh copy of the module entry point.
+ * @param options - Mock state
+ * @returns Handles to the installed mocks
+ */
+async function loadModule(options: FoundryMockOptions = {}) {
+  const mocks = installFoundryMocks(options);
+  vi.resetModules();
+  await import('../../src/index');
+  return mocks;
+}
+
+describe('module entry point', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+  });
+
+  test('does nothing until Foundry fires init', async () => {
+    const { hooks } = await loadModule();
+
+    expect(hooks.once).toHaveBeenCalledExactlyOnceWith('init', expect.any(Function));
+    expect(console.log).not.toHaveBeenCalled();
+  });
+
+  test('announces itself on init', async () => {
+    const { hooks } = await loadModule();
+
+    hooks.run('init');
+
+    expect(console.log).toHaveBeenCalledExactlyOnceWith({{{ts (concat moduleId ' | Initializing')}}});
+  });
+
+  test('only initializes once', async () => {
+    const { hooks } = await loadModule();
+
+    hooks.run('init');
+    hooks.run('init');
+
+    expect(console.log).toHaveBeenCalledOnce();
+  });
+});

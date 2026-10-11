@@ -1,0 +1,24 @@
+# Throwaway Foundry VTT server for the end-to-end tests.
+#
+# Requires FOUNDRY_USERNAME, FOUNDRY_PASSWORD, FOUNDRY_LICENSE_KEY and FOUNDRY_ADMIN_KEY in the environment.
+# Prepare tests/e2e/.data first with `node scripts/e2e/install-packages.ts`.
+services:
+  foundry:
+    # Keep in step with VERSION in .foundryvtt/.env.
+    image: {{{concat 'felddy/foundryvtt:${FOUNDRY_VERSION:-' foundryVersion '}'}}}
+    hostname: localhost
+    environment:
+      - FOUNDRY_USERNAME
+      - FOUNDRY_PASSWORD
+      - FOUNDRY_LICENSE_KEY
+      - FOUNDRY_ADMIN_KEY
+      - FOUNDRY_UID=${FOUNDRY_UID:-1000}
+      - FOUNDRY_GID=${FOUNDRY_GID:-1000}
+      # Keeps the downloaded server release in /data/container_cache so CI can cache it between runs.
+      - CONTAINER_CACHE=/data/container_cache
+    volumes:
+      - ./.data:/data
+      # The module under test: module.json plus the built dist/ from the repository root.
+      - ../..:/data/Data/modules/{{{moduleId}}}:ro
+    ports:
+      - "30000:30000"
