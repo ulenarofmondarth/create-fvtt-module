@@ -95,7 +95,8 @@ The new project's `docs/developers/setup.md` and `CONTRIBUTING.md` describe the 
    as `chore(project): scaffold the module`.
 
 Versions start at `0.x`: the release workflow tags the first commit `v0.0.0` on its first run, so the first `feat`
-commit pushed to `main` is released as `0.1.0`.
+commit pushed to `main` is released as `0.1.0`. If a workflow file has changed since the first commit, it tags the
+last commit that changed one instead; the project's `CONTRIBUTING.md` explains why and what to do about it.
 
 ## How the generator works
 

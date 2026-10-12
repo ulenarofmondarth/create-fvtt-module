@@ -39,12 +39,27 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      # semantic-release numbers a first release 1.0.0. A v0.0.0 tag on the first commit gives it a release to count
-      # from instead, so the first `feat` publishes 0.1.0. Only ever runs while the repository has no version tag.
+      # semantic-release numbers a first release 1.0.0. A v0.0.0 tag gives it a release to count from instead, so the
+      # first `feat` publishes 0.1.0. Only ever runs while the repository has no version tag.
+      #
+      # GitHub refuses a push that puts a ref on a commit whose workflow files differ from the current ones unless the
+      # token may edit workflows, which this one need not. So the tag goes on the oldest commit that has the workflow
+      # files as they are now: the first commit, unless a workflow has changed since.
       - name: Start versioning at 0.x
         run: |
           if [ -z "$(git tag --list 'v*')" ]; then
-            git tag v0.0.0 "$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+            workflows="$(git rev-parse HEAD:.github/workflows)"
+            start="$(git rev-parse HEAD)"
+            for commit in $(git rev-list --first-parent HEAD); do
+              [ "$(git rev-parse --quiet --verify "$commit:.github/workflows")" = "$workflows" ] || break
+              start="$commit"
+            done
+
+            if [ -n "$(git rev-list --max-count=1 "$start^@")" ]; then
+              echo "::warning::Versions are counted from ${start:0:7}, the last commit to change a workflow, not from the first commit: earlier commits do not count towards the first release. To count them, push a v0.0.0 tag to the first commit yourself."
+            fi
+
+            git tag v0.0.0 "$start"
             git push origin v0.0.0
           fi
 

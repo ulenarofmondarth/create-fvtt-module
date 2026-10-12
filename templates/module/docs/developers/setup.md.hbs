@@ -82,7 +82,8 @@ The workflows in `.github/workflows` need:
 
 `PERSONAL_ACCESS_TOKEN`
 : A repository secret holding a token that may push to `main`; the release workflow commits the changelog and the
-  stamped `module.json` with it.
+  stamped `module.json` with it. A fine-grained token needs read and write access to the repository's contents,
+  issues and pull requests. It does not need access to workflows.
 
 `FOUNDRY_USERNAME`, `FOUNDRY_PASSWORD`, `FOUNDRY_LICENSE_KEY` and `FOUNDRY_ADMIN_KEY`
 : Repository secrets used by the end-to-end tests to download and license a Foundry VTT server.

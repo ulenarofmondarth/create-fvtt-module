@@ -76,6 +76,11 @@ Releases are fully automated; never bump a version or create a tag by hand. The 
    `BREAKING CHANGE:` → major. Other types (`docs`, `test`, `ci`, …) do not trigger a release. Versions start from
    `0.0.0`: on its first run the workflow tags the repository's first commit `v0.0.0`, so the first `feat` is released
    as `0.1.0`. (A `fix` before any `feat` would be `0.0.1`, and a breaking change moves to `1.0.0`.)
+
+   If a file in `.github/workflows` has changed since the first commit, the workflow tags the last commit that
+   changed one instead, and warns that the commits before it do not count towards the first release. GitHub will not
+   let the token put a tag on a commit with older workflow files. To count from the first commit all the same, push the
+   tag yourself before the first release: `git tag v0.0.0 <first commit> && git push origin v0.0.0`.
 3. `scripts/release/package.ts` stamps the version into `module.json` and `docs/conf.py`, builds from a clean `dist/`
    and creates `releases/module-v<version>.zip`.
 4. `CHANGELOG.md`, `module.json` and `docs/conf.py` are committed back to `main` as `chore(release): <version>`, the
