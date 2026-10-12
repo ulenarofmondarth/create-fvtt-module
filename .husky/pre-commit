@@ -1,3 +1,5 @@
 #!/bin/env bash
 
-pnpm lint-staged
+# Name the configuration: left to search, lint-staged would apply the generated project's own configuration in
+# templates/module to the template files, and rewrite them as if they were that project's sources.
+pnpm lint-staged --config .lintstagedrc.mjs
