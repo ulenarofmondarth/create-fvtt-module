@@ -167,3 +167,14 @@ commits it with the new version, and creates the GitHub release.
 Publishing uses npm [trusted publishing](https://docs.npmjs.com/trusted-publishers): the registry accepts the identity
 of `.github/workflows/release.yml` in place of a token. The repository needs one secret, `PERSONAL_ACCESS_TOKEN`, with
 which the release commit is pushed to `main`.
+
+# AI Disclosure
+
+Claude Opus 5.5 was used in part for:
+
+- Code generation
+- Tool configuration
+- Debugging
+- Documentation
+
+A human has attested all AI material meets internal standards.
