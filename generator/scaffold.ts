@@ -9,6 +9,28 @@ import type { TemplateData } from './answers.ts';
 /** Templates carry this extension; every other file is copied byte for byte. */
 const TEMPLATE_EXTENSION = '.hbs';
 
+/**
+ * Files stored in the template tree under another name, by the name they are written as.
+ *
+ * Package managers leave files with these names out of a published package (npm drops a nested `.gitignore`, pnpm a
+ * nested `pnpm-lock.yaml`), so the templates could not ship them under their real names.
+ */
+const STORED_AS: Readonly<Record<string, string>> = {
+  '.gitignore': '_gitignore',
+  'pnpm-lock.yaml': '_pnpm-lock.yaml',
+};
+
+const WRITTEN_AS = new Map(Object.entries(STORED_AS).map(([written, stored]) => [stored, written]));
+
+/**
+ * @param source - A file in the template tree, relative to its root
+ * @returns The path the file is written to, relative to the generated project
+ */
+export function targetPath(source: string): string {
+  const rendered = source.endsWith(TEMPLATE_EXTENSION) ? source.slice(0, -TEMPLATE_EXTENSION.length) : source;
+  return WRITTEN_AS.get(rendered) ?? rendered;
+}
+
 /** Renders a Handlebars template with the generator's helpers. */
 export type Render = (template: string, data: TemplateData) => string;
 
@@ -50,11 +72,12 @@ export function assertUsableDestination(destination: string, force: boolean): vo
 export function writeProject(templates: string, data: TemplateData, render: Render): string[] {
   const files = listFiles(templates).map(source => {
     const sourcePath = path.join(templates, source);
-    if (!source.endsWith(TEMPLATE_EXTENSION)) return { sourcePath, target: source, content: undefined };
+    const target = targetPath(source);
+    if (!source.endsWith(TEMPLATE_EXTENSION)) return { sourcePath, target, content: undefined };
 
     try {
       const content = render(fs.readFileSync(sourcePath, 'utf8'), data);
-      return { sourcePath, target: source.slice(0, -TEMPLATE_EXTENSION.length), content };
+      return { sourcePath, target, content };
     } catch (error) {
       throw new Error(`Could not render ${source}: ${error instanceof Error ? error.message : String(error)}`);
     }

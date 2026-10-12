@@ -80,8 +80,8 @@ if (flags.has('--docs')) {
 }
 
 if (flags.has('--update-lockfile')) {
-  fs.copyFileSync(path.join(destination, 'pnpm-lock.yaml'), path.join(ROOT, 'templates/module/pnpm-lock.yaml'));
-  console.log('\nUpdated templates/module/pnpm-lock.yaml');
+  fs.copyFileSync(path.join(destination, 'pnpm-lock.yaml'), path.join(ROOT, 'templates/module/_pnpm-lock.yaml'));
+  console.log('\nUpdated templates/module/_pnpm-lock.yaml');
 }
 
 if (flags.has('--keep')) {

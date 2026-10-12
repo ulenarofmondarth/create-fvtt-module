@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
 import type { Answers } from '../generator/answers.ts';
 import { generate as generateProject } from '../generator/index.ts';
-import { listFiles } from '../generator/scaffold.ts';
+import { listFiles, targetPath } from '../generator/scaffold.ts';
 import { ANSWERS } from './answers.test.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -46,12 +46,25 @@ afterAll(() => {
 describe('the module generator', () => {
   test('writes one file per template, without the template extension', async () => {
     const { destination, result } = await generate('files');
-    const expected = listFiles(TEMPLATES)
-      .map(file => file.replace(/\.hbs$/, ''))
-      .sort();
+    const expected = listFiles(TEMPLATES).map(targetPath).sort();
 
+    expect(expected).not.toContainEqual(expect.stringMatching(/\.hbs$/));
     expect(listFiles(destination)).toEqual(expected);
     expect([...result.files].sort()).toEqual(expected);
+  });
+
+  test('restores the names of the files a published package cannot carry', async () => {
+    const { destination, read } = await generate('stored');
+
+    expect(read('.gitignore')).toContain('node_modules/');
+    expect(read('pnpm-lock.yaml')).toMatch(/^lockfileVersion:/m);
+    expect(listFiles(destination).filter(file => path.basename(file).startsWith('_'))).toEqual([]);
+  });
+
+  test('keeps out of the templates the names package managers leave out of a package', () => {
+    const dropped = listFiles(TEMPLATES).filter(file => ['.gitignore', '.npmrc', 'pnpm-lock.yaml'].includes(file));
+
+    expect(dropped).toEqual([]);
   });
 
   test('fills in the manifest from the answers', async () => {
