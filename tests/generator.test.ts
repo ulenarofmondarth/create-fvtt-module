@@ -14,6 +14,9 @@ import { ANSWERS } from './answers.test.ts';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const TEMPLATES = path.join(ROOT, 'templates/module');
 
+/** Where the generator lives; generated projects name it as their provenance. */
+const GENERATOR_URL = 'https://github.com/ulenarofmondarth/create-fvtt-module';
+
 let work: string;
 
 /**
@@ -129,10 +132,27 @@ describe('the module generator', () => {
     const { destination, read } = await generate('clean');
     // TyphonJS is credited in the docs as a Svelte library for Foundry; that mention is deliberate.
     const leftovers = /mondarth|ulenar|lib-?wrapper|\{\{\{|\{\{[#/]/i;
+    // The AI disclosure links to the generator the project was scaffolded with; that one mention is deliberate too.
+    const withoutProvenance = (text: string) => text.replaceAll(GENERATOR_URL, '');
 
-    const dirty = listFiles(destination).filter(file => file !== 'pnpm-lock.yaml' && leftovers.test(read(file)));
+    const dirty = listFiles(destination).filter(
+      file => file !== 'pnpm-lock.yaml' && leftovers.test(withoutProvenance(read(file))),
+    );
 
     expect(dirty).toEqual([]);
+  });
+
+  test('ends the README and the contributing guide with a disclosure scoped to the scaffold', async () => {
+    const { read } = await generate('disclosure');
+
+    for (const file of ['README.md', 'CONTRIBUTING.md']) {
+      const text = read(file);
+      const disclosure = text.slice(text.lastIndexOf('\n## '));
+
+      expect(disclosure, file).toMatch(/^\n## AI Disclosure\n/);
+      expect(disclosure, file).toContain(`[create-fvtt-module](${GENERATOR_URL})`);
+      expect(disclosure, file).toContain('covers the scaffold only');
+    }
   });
 
   test('writes special characters as valid JSON, TypeScript and Python literals', async () => {
