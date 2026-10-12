@@ -24,8 +24,10 @@ VTT servers, which can also be used in more advances scenarios in `.github/workf
 
 ## ... document with Sphinx?
 
-This is just my taste. I like the power and simplicity of ReStructured Text (more that Markdown but shallower learning
-curve than, for example, LaTeX). I also like the flexible output method from Sphinx. (See [](#replacing-sphinx))
+This is just my taste. I like the power and simplicity of ReStructured Text,
+but have provided Markdown as a more widely adopted standard ( both have
+shallower learning curve than, for example, LaTeX). I also like the flexible
+output method from Sphinx. (See [](#replacing-sphinx))
 
 ## ... all the `svelte` stuff?
 
