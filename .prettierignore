@@ -1,3 +1,4 @@
 # Handlebars sources; the generator formats what it renders from them.
 /templates
+/dist
 /pnpm-lock.yaml

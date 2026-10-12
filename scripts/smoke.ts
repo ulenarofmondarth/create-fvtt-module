@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * Generate a project into a temporary directory and run the checks its own CI workflow runs.
+ * Pack the generator as it is published, install that package into a temporary directory, generate a project with its
+ * command line, and run the checks the generated project's own CI workflow runs.
+ *
+ * Going through the packed tarball is the point: it is the only check that sees what users get, including whatever a
+ * package manager leaves out of the package.
  *
  * Usage: `node scripts/smoke.ts [--docs] [--keep] [--update-lockfile]`
  *
@@ -16,12 +20,12 @@ import os from 'node:os';
 import path from 'node:path';
 
 import type { Answers } from '../generator/answers.ts';
-import { generate } from '../generator/index.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const flags = new Set(process.argv.slice(2));
 
-const destination = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'fvtt-module-template-')), 'smoke-module');
+const work = fs.mkdtempSync(path.join(os.tmpdir(), 'create-fvtt-module-smoke-'));
+const destination = path.join(work, 'smoke-module');
 
 // Awkward on purpose: quotes and an ampersand must survive into JSON, TypeScript, Python and Markdown.
 const answers: Answers = {
@@ -44,16 +48,42 @@ const answers: Answers = {
 };
 
 /**
+ * Run a command, failing the smoke test if it fails.
+ * @param cwd - The directory to run it in
+ * @param command - The executable
+ * @param args - Its arguments
+ */
+function runIn(cwd: string, command: string, ...args: string[]): void {
+  console.log(`\n$ ${command} ${args.join(' ')}`);
+  execFileSync(command, args, { cwd, stdio: 'inherit' });
+}
+
+/**
  * Run a command in the generated project, failing the smoke test if it fails.
  * @param command - The executable
  * @param args - Its arguments
  */
 function run(command: string, ...args: string[]): void {
-  console.log(`\n$ ${command} ${args.join(' ')}`);
-  execFileSync(command, args, { cwd: destination, stdio: 'inherit' });
+  runIn(destination, command, ...args);
 }
 
-await generate(answers, { onStep: console.log });
+// `npm pack` runs the `prepack` build, so the tarball holds the compiled generator.
+runIn(ROOT, 'npm', 'pack', '--pack-destination', work);
+const tarball = fs.readdirSync(work).find(file => file.endsWith('.tgz'));
+if (tarball === undefined) throw new Error('npm pack produced no tarball');
+
+// Install it as a user's package manager would, with its dependencies, somewhere unrelated to this repository.
+const consumer = path.join(work, 'consumer');
+fs.mkdirSync(consumer);
+fs.writeFileSync(path.join(consumer, 'package.json'), JSON.stringify({ name: 'consumer', private: true }));
+runIn(consumer, 'npm', 'install', '--no-audit', '--no-fund', path.join(work, tarball));
+
+const options = Object.entries(answers).flatMap(([name, value]) => {
+  if (name === 'destination') return [];
+  const option = name.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+  return typeof value === 'boolean' ? [`--${value ? '' : 'no-'}${option}`] : [`--${option}`, value];
+});
+runIn(consumer, path.join('node_modules', '.bin', 'create-fvtt-module'), destination, '--yes', ...options);
 
 // The same gates as the generated .github/workflows/ci.yml.
 run('pnpm', 'typecheck');
@@ -87,6 +117,6 @@ if (flags.has('--update-lockfile')) {
 if (flags.has('--keep')) {
   console.log(`\nSmoke test passed. The generated project is in ${destination}`);
 } else {
-  fs.rmSync(path.dirname(destination), { recursive: true, force: true });
+  fs.rmSync(work, { recursive: true, force: true });
   console.log('\nSmoke test passed.');
 }

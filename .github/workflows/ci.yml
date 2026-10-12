@@ -30,9 +30,10 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm run format:check
       - run: pnpm test
+      - run: pnpm build
 
   smoke:
-    name: Generate a project and run its checks
+    name: Pack, generate a project and run its checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
