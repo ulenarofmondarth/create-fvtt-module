@@ -180,7 +180,7 @@ importers:
         version: 3.23.1(eslint@10.12.0(jiti@2.6.1)(supports-color@7.2.0))(svelte@5.57.2(@typescript-eslint/types@8.71.1))
       fvtt-types:
         specifier: github:League-of-Foundry-Developers/foundry-vtt-types#main
-        version: '@league-of-foundry-developers/foundry-vtt-types@https://codeload.github.com/League-of-Foundry-Developers/foundry-vtt-types/tar.gz/27bf7b9bac68a74a5346c7ca44432917d9f41bdb(06cb1c9eb32510e71d339aed25345c51)'
+        version: '@league-of-foundry-developers/foundry-vtt-types@https://codeload.github.com/League-of-Foundry-Developers/foundry-vtt-types/tar.gz/27bf7b9bac68a74a5346c7ca44432917d9f41bdb(b2939dc1d5a5e5597ee14ae72e5a6b17)'
       globals:
         specifier: ^16.5.0
         version: 16.5.0
@@ -226,6 +226,9 @@ importers:
       vitest:
         specifier: ^3.2.7
         version: 3.2.7(@types/node@26.6.5)(happy-dom@20.14.6)(jiti@2.6.1)(supports-color@7.2.0)(yaml@2.9.1)
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
 
 packages:
 
@@ -3186,72 +3189,6 @@ packages:
     resolution: {integrity: sha512-Zov8KhamNneiLdELtj5YALtNmJW4L4fCLTzjfpzXG2w6MSHcf0UxgdlK5uloCuksWT+7mGUU7wi79cO6RqivPg==}
     engines: {node: ^20.17.0 || >=22.9.0}
     hasBin: true
-    bundledDependencies:
-      - '@isaacs/string-locale-compare'
-      - '@npmcli/arborist'
-      - '@npmcli/config'
-      - '@npmcli/fs'
-      - '@npmcli/map-workspaces'
-      - '@npmcli/metavuln-calculator'
-      - '@npmcli/package-json'
-      - '@npmcli/promise-spawn'
-      - '@npmcli/redact'
-      - '@npmcli/run-script'
-      - '@sigstore/tuf'
-      - abbrev
-      - archy
-      - cacache
-      - chalk
-      - ci-info
-      - fastest-levenshtein
-      - fs-minipass
-      - glob
-      - graceful-fs
-      - hosted-git-info
-      - ini
-      - init-package-json
-      - is-cidr
-      - json-parse-even-better-errors
-      - libnpmaccess
-      - libnpmdiff
-      - libnpmexec
-      - libnpmfund
-      - libnpmorg
-      - libnpmpack
-      - libnpmpublish
-      - libnpmsearch
-      - libnpmteam
-      - libnpmversion
-      - make-fetch-happen
-      - minimatch
-      - minipass
-      - minipass-pipeline
-      - ms
-      - node-gyp
-      - nopt
-      - npm-audit-report
-      - npm-install-checks
-      - npm-package-arg
-      - npm-pick-manifest
-      - npm-profile
-      - npm-registry-fetch
-      - npm-user-validate
-      - p-map
-      - pacote
-      - parse-conflict-json
-      - proc-log
-      - qrcode-terminal
-      - read
-      - semver
-      - spdx-expression-parse
-      - ssri
-      - supports-color
-      - tar
-      - text-table
-      - tiny-relative-date
-      - treeverse
-      - validate-npm-package-name
-      - which
 
   object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
@@ -4466,6 +4403,9 @@ packages:
   zimmerframe@1.1.5:
     resolution: {integrity: sha512-msJxIvYDYcoNL+PJsu+7qmpDWsYmAxTY+2TNYXXF0hzBzBk0BMecOqDOG/EckUoKCuKwObfbugIl8QpqHDXeFA==}
 
+  zod@4.6.5:
+    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
+
 snapshots:
 
   '@actions/core@3.0.1':
@@ -4962,7 +4902,7 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@league-of-foundry-developers/foundry-vtt-types@https://codeload.github.com/League-of-Foundry-Developers/foundry-vtt-types/tar.gz/27bf7b9bac68a74a5346c7ca44432917d9f41bdb(06cb1c9eb32510e71d339aed25345c51)':
+  '@league-of-foundry-developers/foundry-vtt-types@https://codeload.github.com/League-of-Foundry-Developers/foundry-vtt-types/tar.gz/27bf7b9bac68a74a5346c7ca44432917d9f41bdb(b2939dc1d5a5e5597ee14ae72e5a6b17)':
     dependencies:
       '@codemirror/lang-html': 6.4.12
       '@codemirror/lang-javascript': 6.2.5
@@ -4998,9 +4938,9 @@ snapshots:
       prosemirror-view: 1.42.6
       sanitize-html: 2.18.0
       showdown: 2.1.0
-      simple-peer: 9.11.1(supports-color@7.2.0)
-      socket.io: 4.8.4(supports-color@7.2.0)
-      socket.io-client: 4.8.4(supports-color@7.2.0)
+      simple-peer: 9.11.1
+      socket.io: 4.8.4
+      socket.io-client: 4.8.4
       spark-md5: 3.0.2
     optionalDependencies:
       typescript: '@typescript/typescript6@6.0.2'
@@ -6444,7 +6384,7 @@ snapshots:
 
   emojilib@2.4.0: {}
 
-  engine.io-client@6.6.7(supports-color@7.2.0):
+  engine.io-client@6.6.7:
     dependencies:
       '@socket.io/component-emitter': 3.1.2
       debug: 4.4.3(supports-color@7.2.0)
@@ -6458,7 +6398,7 @@ snapshots:
 
   engine.io-parser@5.2.3: {}
 
-  engine.io@6.6.11(supports-color@7.2.0):
+  engine.io@6.6.11:
     dependencies:
       '@types/cors': 2.8.19
       '@types/node': 26.6.5
@@ -8130,7 +8070,7 @@ snapshots:
       figures: 2.0.0
       pkg-conf: 2.1.0
 
-  simple-peer@9.11.1(supports-color@7.2.0):
+  simple-peer@9.11.1:
     dependencies:
       buffer: 6.0.3
       debug: 4.4.3(supports-color@7.2.0)
@@ -8156,7 +8096,7 @@ snapshots:
       ansi-styles: 6.2.3
       is-fullwidth-code-point: 5.1.0
 
-  socket.io-adapter@2.5.8(supports-color@7.2.0):
+  socket.io-adapter@2.5.8:
     dependencies:
       debug: 4.4.3(supports-color@7.2.0)
       ws: 8.21.3
@@ -8165,32 +8105,32 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  socket.io-client@4.8.4(supports-color@7.2.0):
+  socket.io-client@4.8.4:
     dependencies:
       '@socket.io/component-emitter': 3.1.2
       debug: 4.4.3(supports-color@7.2.0)
-      engine.io-client: 6.6.7(supports-color@7.2.0)
-      socket.io-parser: 4.2.7(supports-color@7.2.0)
+      engine.io-client: 6.6.7
+      socket.io-parser: 4.2.7
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
 
-  socket.io-parser@4.2.7(supports-color@7.2.0):
+  socket.io-parser@4.2.7:
     dependencies:
       '@socket.io/component-emitter': 3.1.2
       debug: 4.4.3(supports-color@7.2.0)
     transitivePeerDependencies:
       - supports-color
 
-  socket.io@4.8.4(supports-color@7.2.0):
+  socket.io@4.8.4:
     dependencies:
       accepts: 1.3.8
       cors: 2.8.6
       debug: 4.4.3(supports-color@7.2.0)
-      engine.io: 6.6.11(supports-color@7.2.0)
-      socket.io-adapter: 2.5.8(supports-color@7.2.0)
-      socket.io-parser: 4.2.7(supports-color@7.2.0)
+      engine.io: 6.6.11
+      socket.io-adapter: 2.5.8
+      socket.io-parser: 4.2.7
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -8784,3 +8724,5 @@ snapshots:
   yoctocolors@2.2.0: {}
 
   zimmerframe@1.1.5: {}
+
+  zod@4.6.5: {}

@@ -12,11 +12,64 @@ import moduleJSON from './module.json' with { type: 'json' };
 import tsconfigPaths from 'vite-tsconfig-paths';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+import { z } from 'zod';
 
-const PORTS = {
-  base: 30000,
-  dev: 31002,
+// Defaults for the dev server. Any of them can be overridden without editing this file through a JSON file, by default
+// `.pdt/mount.json` next to this configuration; set `PDT_MOUNT_CONFIG` to read a different file (a relative path is
+// resolved from this directory). The file may supply any subset of the values:
+//
+//   { "hostname": "foundrymoddev1", "ports": { "base": 30000, "dev": 31002 } }
+const DEFAULTS = {
+  // Hostname the dev server is reached under from the browser, in addition to `localhost`.
+  hostname: 'foundrymoddev1',
+  ports: {
+    base: 30000, // Main Foundry server.
+    dev: 31002, // Vite dev server.
+  },
 };
+
+const DEFAULT_MOUNT_CONFIG = '.pdt/mount.json';
+
+const port = z.int().min(1).max(65535);
+const mountConfigSchema = z.object({
+  hostname: z.string().min(1).optional(),
+  ports: z.object({ base: port.optional(), dev: port.optional() }).optional(),
+});
+
+/**
+ * Merge the external dev server settings, when there are any, over {@link DEFAULTS}.
+ * @returns The effective hostname and ports
+ */
+function loadMountConfig(): typeof DEFAULTS {
+  const override = process.env.PDT_MOUNT_CONFIG;
+  const file = path.resolve(__dirname, override ?? DEFAULT_MOUNT_CONFIG);
+
+  if (!fs.existsSync(file)) {
+    // The default file is optional, but a file that was asked for explicitly must exist.
+    if (override !== undefined) throw new Error(`PDT_MOUNT_CONFIG points to a missing file: ${file}`);
+    return DEFAULTS;
+  }
+
+  let json: unknown;
+  try {
+    json = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (error) {
+    throw new Error(`Unable to parse ${file} as JSON`, { cause: error });
+  }
+
+  const parsed = mountConfigSchema.safeParse(json);
+  if (!parsed.success) throw new Error(`Invalid dev server settings in ${file}:\n${z.prettifyError(parsed.error)}`);
+
+  return {
+    hostname: parsed.data.hostname ?? DEFAULTS.hostname,
+    ports: {
+      base: parsed.data.ports?.base ?? DEFAULTS.ports.base,
+      dev: parsed.data.ports?.dev ?? DEFAULTS.ports.dev,
+    },
+  };
+}
+
+const { hostname: HOSTNAME, ports: PORTS } = loadMountConfig();
 
 const s_PACKAGE_ID = `modules/${moduleJSON.id}`;
 
@@ -26,12 +79,6 @@ const s_SVELTE_HASH_ID = {{{ts svelteHashId}}};
 
 const s_COMPRESS = false as boolean; // Set to true to compress the module bundle.
 const s_SOURCEMAPS = true; // Generate sourcemaps for the bundle (recommended).
-
-// Extra host names the dev server answers to, comma-separated in VITE_ALLOWED_HOSTS (e.g. a remote development machine).
-const s_ALLOWED_HOSTS = (process.env.VITE_ALLOWED_HOSTS ?? '')
-  .split(',')
-  .map(host => host.trim())
-  .filter(Boolean);
 
 /**
  * Copy the localization files from `src/lang` into `dist/lang`, where `module.json` expects them.
@@ -126,7 +173,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: PORTS.dev,
       host: true,
-      allowedHosts: s_ALLOWED_HOSTS,
+      allowedHosts: [HOSTNAME],
       // open: '/game',
       proxy: {
         // Serves root-level static files and the built stylesheet from main Foundry server.

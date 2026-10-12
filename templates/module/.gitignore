@@ -3,6 +3,7 @@ module.zip
 .idea
 .DS_Store
 .vite-cache/
+.pdt/
 .vscode/**/*
 !.vscode/extensions.json
 _build/
