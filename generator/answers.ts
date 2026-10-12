@@ -45,7 +45,8 @@ export interface TemplateData extends Answers {
   year: string;
 }
 
-type Validation = true | string;
+/** The result of checking an answer: `true`, or the reason it is not acceptable. */
+export type Validation = true | string;
 
 /** Release archives of game systems the generator knows a pinned build of. */
 const KNOWN_SYSTEM_URLS: Record<string, string> = {

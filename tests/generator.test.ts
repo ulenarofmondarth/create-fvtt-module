@@ -3,11 +3,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import nodePlop from 'node-plop';
 import * as prettier from 'prettier';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
 import type { Answers } from '../generator/answers.ts';
+import { generate as generateProject } from '../generator/index.ts';
 import { listFiles } from '../generator/scaffold.ts';
 import { ANSWERS } from './answers.test.ts';
 
@@ -17,15 +17,14 @@ const TEMPLATES = path.join(ROOT, 'templates/module');
 let work: string;
 
 /**
- * Run the generator the way plop does once the prompts are answered.
+ * Run the generator the way a host does once the questions are answered.
  * @param name - Directory name for the project, below the temporary work directory
  * @param overrides - Answers that differ from the defaults used by these tests
- * @returns The project directory and plop's report of what happened
+ * @returns The project directory, the generator's report and readers for the files written
  */
 async function generate(name: string, overrides: Partial<Answers> = {}) {
   const destination = path.join(work, name);
-  const plop = await nodePlop(path.join(ROOT, 'plopfile.ts'));
-  const result = await plop.getGenerator('module').runActions({ ...ANSWERS, ...overrides, destination });
+  const result = await generateProject({ ...ANSWERS, ...overrides, destination });
 
   return {
     destination,
@@ -37,7 +36,7 @@ async function generate(name: string, overrides: Partial<Answers> = {}) {
 }
 
 beforeAll(() => {
-  work = fs.mkdtempSync(path.join(os.tmpdir(), 'fvtt-module-template-test-'));
+  work = fs.mkdtempSync(path.join(os.tmpdir(), 'create-fvtt-module-test-'));
 });
 
 afterAll(() => {
@@ -47,13 +46,12 @@ afterAll(() => {
 describe('the module generator', () => {
   test('writes one file per template, without the template extension', async () => {
     const { destination, result } = await generate('files');
+    const expected = listFiles(TEMPLATES)
+      .map(file => file.replace(/\.hbs$/, ''))
+      .sort();
 
-    expect(result.failures).toEqual([]);
-    expect(listFiles(destination)).toEqual(
-      listFiles(TEMPLATES)
-        .map(file => file.replace(/\.hbs$/, ''))
-        .sort(),
-    );
+    expect(listFiles(destination)).toEqual(expected);
+    expect([...result.files].sort()).toEqual(expected);
   });
 
   test('fills in the manifest from the answers', async () => {
@@ -168,24 +166,18 @@ describe('the module generator', () => {
     fs.mkdirSync(path.join(work, 'occupied'));
     fs.writeFileSync(path.join(work, 'occupied/keep.txt'), 'precious');
 
-    const { destination, result } = await generate('occupied');
-
-    expect(result.failures).toHaveLength(1);
-    expect(result.failures[0]?.error).toMatch(/is not empty/);
-    expect(fs.readdirSync(destination)).toEqual(['keep.txt']);
+    await expect(generate('occupied')).rejects.toThrow(/is not empty/);
+    expect(fs.readdirSync(path.join(work, 'occupied'))).toEqual(['keep.txt']);
   });
 
   test('rejects invalid answers before writing anything', async () => {
-    const { destination, result } = await generate('invalid', { moduleId: 'Not Valid' });
-
-    expect(result.failures[0]?.error).toMatch(/Invalid moduleId/);
-    expect(fs.existsSync(destination)).toBe(false);
+    await expect(generate('invalid', { moduleId: 'Not Valid' })).rejects.toThrow(/Invalid moduleId/);
+    expect(fs.existsSync(path.join(work, 'invalid'))).toBe(false);
   });
 
   test('can initialise a git repository on main', async () => {
-    const { destination, result } = await generate('git', { gitInit: true });
+    const { destination } = await generate('git', { gitInit: true });
 
-    expect(result.failures).toEqual([]);
     const branch = execFileSync('git', ['symbolic-ref', '--short', 'HEAD'], { cwd: destination, encoding: 'utf8' });
     expect(branch.trim()).toBe('main');
   });

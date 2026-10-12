@@ -15,9 +15,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import nodePlop from 'node-plop';
-
 import type { Answers } from '../generator/answers.ts';
+import { generate } from '../generator/index.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const flags = new Set(process.argv.slice(2));
@@ -54,12 +53,7 @@ function run(command: string, ...args: string[]): void {
   execFileSync(command, args, { cwd: destination, stdio: 'inherit' });
 }
 
-const plop = await nodePlop(path.join(ROOT, 'plopfile.ts'));
-const { failures } = await plop.getGenerator('module').runActions(answers);
-if (failures.length > 0) {
-  console.error(failures);
-  process.exit(1);
-}
+await generate(answers, { onStep: console.log });
 
 // The same gates as the generated .github/workflows/ci.yml.
 run('pnpm', 'typecheck');

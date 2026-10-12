@@ -34,7 +34,7 @@ export function assertUsableDestination(destination: string, force: boolean): vo
   if (!fs.existsSync(destination)) return;
   if (!fs.statSync(destination).isDirectory()) throw new Error(`${destination} exists and is not a directory`);
   if (!force && fs.readdirSync(destination).length > 0) {
-    throw new Error(`${destination} is not empty (run plop with --force to write into it anyway)`);
+    throw new Error(`${destination} is not empty (use --force to write into it anyway)`);
   }
 }
 
