@@ -168,7 +168,7 @@ Publishing uses npm [trusted publishing](https://docs.npmjs.com/trusted-publishe
 of `.github/workflows/release.yml` in place of a token. The repository needs one secret, `PERSONAL_ACCESS_TOKEN`, with
 which the release commit is pushed to `main`.
 
-# AI Disclosure
+## AI Disclosure
 
 Claude Opus 5.5 was used in part for:
 
@@ -177,4 +177,4 @@ Claude Opus 5.5 was used in part for:
 - Debugging
 - Documentation
 
-A human has attested all AI material meets internal standards.
+A human has reviewed all AI material against internal standards.
