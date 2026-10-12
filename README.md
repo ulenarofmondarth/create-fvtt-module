@@ -1,7 +1,10 @@
-# Foundry VTT module template
+# create-fvtt-module
 
-A [plop](https://plopjs.com) generator that creates a complete, working project for a Foundry VTT module (version 14 and
-later) from a handful of answers.
+Creates a complete, working project for a Foundry VTT module (version 14 and later) from a handful of answers.
+
+```sh
+pnpm create @mondarth/fvtt-module
+```
 
 The generated project has no module code beyond an entry point that logs on `init`. What it has is the tooling:
 
@@ -17,7 +20,7 @@ The generated project has no module code beyond an entry point that logs on `ini
 
 ## Requirements
 
-- Node.js 24 or later (the generator and the generated scripts are TypeScript run directly by Node)
+- Node.js 24 or later (the generated project's scripts are TypeScript run directly by Node)
 - pnpm
 - git
 - Docker, for the generated project's documentation, development server and end-to-end tests
@@ -25,8 +28,9 @@ The generated project has no module code beyond an entry point that logs on `ini
 ## Generating a module
 
 ```sh
-pnpm install
-pnpm generate
+pnpm create @mondarth/fvtt-module [destination]
+# or
+npm create @mondarth/fvtt-module [destination]
 ```
 
 You are asked for:
@@ -46,23 +50,39 @@ You are asked for:
 | `systemId`         | The game system the end-to-end test world is created with                                       |
 | `systemUrl`        | The release `.zip` of that system, pinned for the tests. Known for `dnd5e`, asked for otherwise |
 | `restrictToSystem` | Whether `module.json` declares that system as required                                          |
-| `destination`      | Where to create the project. Defaults to `../<moduleId>`, next to this repository               |
+| `destination`      | Where to create the project. Defaults to `./<moduleId>`                                         |
 | `gitInit`          | Whether to run `git init` there                                                                 |
 | `install`          | Whether to run `pnpm install` there                                                             |
 
-The generator refuses to write into a directory that already has content unless plop is run with `--force`.
+The generator refuses to write into a directory that already has content unless it is run with `--force`.
 
-To skip the prompts, give the answers by name. Anything left out is still asked for:
+To skip the prompts, give the answers as options; `--help` lists them all. Anything left out is still asked for,
+unless `--yes` is given or there is no terminal, in which case the defaults are used and a missing answer that has no
+default is an error:
 
 ```sh
-pnpm generate -- \
-  --moduleId arcane-ledger --moduleTitle "Arcane Ledger" --description "Keeps the party accounts." \
-  --authorName "A. Scribe" --authorEmail "" --authorUrl "" --authorDiscord "" \
-  --githubOwner Scribes-Guild --repoName arcane-ledger \
-  --foundryVersion 14.368.0 --systemId dnd5e \
-  --systemUrl https://github.com/foundryvtt/dnd5e/releases/download/release-5.3.3/dnd5e-release-5.3.3.zip \
-  --restrictToSystem n --destination ../arcane-ledger --gitInit y --install y
+pnpm create @mondarth/fvtt-module ./arcane-ledger \
+  --module-id arcane-ledger --description "Keeps the party accounts." \
+  --author-name "A. Scribe" --github-owner Scribes-Guild \
+  --foundry-version 14.368.0 --no-install --yes
 ```
+
+With `npm create`, put `--` before the options so that npm passes them on.
+
+## Using the generator from another tool
+
+The package is also a library, so a tool can ask the questions its own way and then generate:
+
+```ts
+import { generate, questions, type Answers } from "@mondarth/create-fvtt-module";
+
+// `questions` describes every answer: its name, its prompt, its default and its validation.
+const answers: Answers = await askYourOwnWay(questions);
+const { destination, files } = await generate(answers, { onStep: console.log });
+```
+
+`generate` validates the answers before it writes anything and throws an `Error` naming the first invalid one. It
+runs `git init` and `pnpm install` in the new project when `answers.gitInit` and `answers.install` are set.
 
 ## After generating
 
@@ -79,14 +99,17 @@ commit pushed to `main` is released as `0.1.0`.
 
 ## How the generator works
 
-| Path                    | Purpose                                                                            |
-| ----------------------- | ---------------------------------------------------------------------------------- |
-| `plopfile.ts`           | The prompts, the Handlebars helpers and the three actions                          |
-| `generator/answers.ts`  | Validation of the answers and the values derived from them                         |
-| `generator/scaffold.ts` | Writing, formatting, `git init` and `pnpm install`                                 |
-| `templates/module/`     | The project that is generated                                                      |
-| `tests/`                | Unit tests of the generator                                                        |
-| `scripts/smoke.ts`      | Generates a project and runs its typecheck, lint, tests, build and release package |
+| Path                     | Purpose                                                                            |
+| ------------------------ | ---------------------------------------------------------------------------------- |
+| `generator/index.ts`     | The library entry point: `generate` and the exported types                         |
+| `generator/cli.ts`       | The command line: options, prompts, and the call to `generate`                     |
+| `generator/questions.ts` | The questions, as data                                                             |
+| `generator/answers.ts`   | Validation of the answers and the values derived from them                         |
+| `generator/render.ts`    | Handlebars and its helpers                                                         |
+| `generator/scaffold.ts`  | Writing, formatting, `git init` and `pnpm install`                                 |
+| `templates/module/`      | The project that is generated                                                      |
+| `tests/`                 | Unit tests of the generator                                                        |
+| `scripts/smoke.ts`       | Packs the generator, generates from the package, and runs the project's own checks |
 
 Files in `templates/module/` ending in `.hbs` are rendered with Handlebars and lose the extension. Every other file is
 copied byte for byte, so GitHub Actions workflows and MyST pages can use `{{ }}` freely. After rendering, the generator
@@ -99,28 +122,48 @@ When editing templates:
 - Inside string literals use the helpers: `{{{json value}}}` for JSON, `{{{ts value}}}` for TypeScript and
   `{{{py value}}}` for Python. They add the quotes and escape the value. `{{{concat a 'b' c}}}` joins values.
 - In a `.hbs` file, write a literal `{{` as `\{{`.
+- Do not add a file named `.gitignore`, `.npmrc` or `pnpm-lock.yaml`: package managers leave those out of a published
+  package. Store it under another name and add the pair to `STORED_AS` in `generator/scaffold.ts`, as is done for
+  `_gitignore` and `_pnpm-lock.yaml`.
 
 ### The template lockfile
 
-`templates/module/pnpm-lock.yaml` is copied into every new project, so each one starts with the dependency versions
+`templates/module/_pnpm-lock.yaml` is copied into every new project as `pnpm-lock.yaml`, so each one starts with the dependency versions
 the template was last tested with. This matters most for `fvtt-types`, which tracks the `main` branch of its
 repository: `pnpm-workspace.yaml` has to name the exact commit whose build script is allowed to run, and the lockfile
 keeps new projects on that commit.
 
 To move the template to current versions:
 
-1. Delete `templates/module/pnpm-lock.yaml`.
+1. Delete `templates/module/_pnpm-lock.yaml`.
 2. Run `pnpm run test:smoke --update-lockfile`.
 3. If the install stops with `ERR_PNPM_IGNORED_BUILDS` for `foundry-vtt-types`, copy the package key from the error
    message over the old one in `templates/module/pnpm-workspace.yaml`, and run the command again.
 
-## Checking the generator
+## Working on the generator
 
 ```sh
+pnpm install
+pnpm generate           # runs the command line from source
 pnpm typecheck
 pnpm test               # generates into temporary directories and inspects the result
-pnpm run test:smoke     # generates a project, installs it and runs its own checks; slow, uses the network
+pnpm build              # compiles generator/ to dist/, which is what the package ships
+pnpm run test:smoke     # packs the package, installs it, generates a project and runs its own checks; slow, uses the network
 pnpm run test:smoke --docs   # the same, plus the Docker build of the documentation
 ```
 
 The smoke test does not run the generated end-to-end tests: they need a Foundry VTT licence.
+
+The sources are TypeScript that Node runs directly, but Node refuses to do that for files under `node_modules`, so the
+published package contains the compiled `dist/` and the `templates/` only.
+
+## Releasing
+
+Commits follow [Conventional Commits](https://www.conventionalcommits.org), enforced by a commit hook, with a
+mandatory scope. Every push to `main` that passes CI runs semantic-release, which works out the version from the
+commits (`fix` → patch, `feat` → minor, `!` or `BREAKING CHANGE:` → major), publishes to npm, writes `CHANGELOG.md`,
+commits it with the new version, and creates the GitHub release.
+
+Publishing uses npm [trusted publishing](https://docs.npmjs.com/trusted-publishers): the registry accepts the identity
+of `.github/workflows/release.yml` in place of a token. The repository needs one secret, `PERSONAL_ACCESS_TOKEN`, with
+which the release commit is pushed to `main`.
