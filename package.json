@@ -23,7 +23,7 @@
   },
   "type": "module",
   "bin": {
-    "create-fvtt-module": "./dist/cli.js"
+    "create-fvtt-module": "dist/cli.js"
   },
   "exports": {
     ".": {
