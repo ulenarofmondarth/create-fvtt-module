@@ -103,6 +103,11 @@ export default defineConfig(
     languageOptions: { globals: { ...globals.browser, ...globals.jquery, ...foundry } },
   },
   {
+    // The unit tests run in a simulated browser.
+    files: ['tests/unit/**'],
+    languageOptions: { globals: globals.browser },
+  },
+  {
     // Functions the end-to-end tests pass to `page.evaluate` run in the Foundry client too.
     files: ['tests/e2e/**'],
     languageOptions: { globals: foundry },
