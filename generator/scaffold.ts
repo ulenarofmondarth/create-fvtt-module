@@ -21,6 +21,20 @@ const STORED_AS: Readonly<Record<string, string>> = {
   'pnpm-lock.yaml': '_pnpm-lock.yaml',
 };
 
+/**
+ * Directories the project needs from the start although nothing is in them yet.
+ *
+ * Docker creates as root whatever is missing of a bind mount: its source, and the directories leading to a mount
+ * point inside another mount. The Foundry VTT server in the container cannot then write there. Made here, the
+ * development server's data directory, down to where the project is mounted in it as a module, belongs to whoever
+ * generated the project. Keep in step with the `serve:vtt` script, which does the same for a fresh clone.
+ * @param data - What the templates are rendered with
+ * @returns The directories, relative to the project
+ */
+function emptyDirectories(data: TemplateData): string[] {
+  return [`.foundryvtt/data/Data/modules/${data.moduleId}`];
+}
+
 const WRITTEN_AS = new Map(Object.entries(STORED_AS).map(([written, stored]) => [stored, written]));
 
 /** A TypeScript source file, as opposed to a declaration file, which has no JavaScript counterpart. */
@@ -67,7 +81,8 @@ export function assertUsableDestination(destination: string, force: boolean): vo
 }
 
 /**
- * Write the project: render the `.hbs` templates, copy everything else unchanged, keeping file modes.
+ * Write the project: render the `.hbs` templates, copy everything else unchanged, keeping file modes, and create the
+ * directories that start out empty.
  *
  * The templates are TypeScript. For a JavaScript project the types are stripped from each TypeScript source file,
  * which is then written as `.js`; formatting the project afterwards tidies the gaps that leaves.
@@ -113,6 +128,9 @@ export function writeProject(templates: string[], data: TemplateData, render: Re
     else fs.writeFileSync(writtenPath, content);
     fs.chmodSync(writtenPath, fs.statSync(sourcePath).mode);
   }
+
+  for (const directory of emptyDirectories(data))
+    fs.mkdirSync(path.join(data.destination, directory), { recursive: true });
 
   return [...files.keys()].sort();
 }

@@ -129,6 +129,11 @@ Handlebars and lose the extension. Every other file is copied byte for byte, so 
 a template can use `{{ }}` freely. After rendering, the generator formats the project with the project's own Prettier
 configuration, so the output passes its format check whatever the length of the names.
 
+The generator also creates the development server's data directory, `.foundryvtt/data`, down to the point inside it
+where the container mounts the project as a module. Docker would create whatever is missing of that as root; created
+here, it belongs to whoever generated the project. The directory is not committed, so the project's `serve:vtt` script
+creates it again in a fresh clone.
+
 The templates are written once, in TypeScript. For a JavaScript project the generator strips the types from every
 `.ts` file (not `.d.ts`) and writes it as `.js`, so the two languages cannot drift apart.
 

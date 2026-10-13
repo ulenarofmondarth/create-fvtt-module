@@ -216,6 +216,26 @@ describe('the module generator', () => {
     }
   });
 
+  test('creates the development server data directory, for Docker to mount as the user rather than create as root', async () => {
+    const { destination, read, json } = await generate('data-directory');
+    // Down to the point where the compose file mounts the project as a module.
+    const mountPoint = path.join(destination, '.foundryvtt/data/Data/modules/arcane-ledger');
+
+    expect(read('.foundryvtt/docker-compose.yml')).toContain('source: ./data');
+    expect(read('.foundryvtt/docker-compose.yml')).toContain('target: /data/Data/modules/arcane-ledger');
+    expect(fs.statSync(mountPoint).isDirectory()).toBe(true);
+    expect(fs.readdirSync(mountPoint)).toEqual([]);
+    for (let directory = mountPoint; directory !== path.join(destination, '.foundryvtt');) {
+      expect(fs.statSync(directory).uid, directory).toBe(process.getuid?.());
+      directory = path.dirname(directory);
+    }
+    expect(read('.gitignore')).toContain('.foundryvtt/data/');
+    // The directory is not committed, so a clone has to make it before Docker does.
+    expect(json('package.json')).toMatchObject({
+      scripts: { 'serve:vtt': 'cd .foundryvtt && mkdir -p data/Data/modules/arcane-ledger && docker compose up -d' },
+    });
+  });
+
   test('refuses to write into a directory that already has content', async () => {
     fs.mkdirSync(path.join(work, 'occupied'));
     fs.writeFileSync(path.join(work, 'occupied/keep.txt'), 'precious');

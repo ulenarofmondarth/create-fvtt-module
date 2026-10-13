@@ -41,7 +41,7 @@
     "eslint": "eslint .",
     "prepare": "husky",
     "release": "semantic-release",
-    "serve:vtt": "cd .foundryvtt && docker compose up -d",
+    "serve:vtt": "cd .foundryvtt && mkdir -p data/Data/modules/{{{moduleId}}} && docker compose up -d",
     "build:docs": "docker compose run --rm --user \"$(id -u):$(id -g)\" docs make html",
     "serve:docs": "docker run --rm --name docserver -d -p 8080:80 -v \"$(pwd)/docs/_build/html\":/usr/share/nginx/html:ro nginx",
     "devserve:docs": "docker compose run --rm --service-ports --user \"$(id -u):$(id -g)\" docs make livehtml",
