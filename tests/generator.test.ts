@@ -7,7 +7,7 @@ import * as prettier from 'prettier';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
 import type { Answers, Language, UiFramework } from '../generator/answers.ts';
-import { LANGUAGES } from '../generator/answers.ts';
+import { LANGUAGES, UI_FRAMEWORKS } from '../generator/answers.ts';
 import { generate as generateProject } from '../generator/index.ts';
 import { listFiles, targetPath } from '../generator/scaffold.ts';
 import { ANSWERS } from './answers.test.ts';
@@ -337,50 +337,61 @@ describe('a JavaScript project', () => {
   });
 });
 
-describe.each(LANGUAGES)('a %s project without a UI framework', language => {
-  /** Anything that names Svelte, its tooling, or a library built on it. */
-  const SVELTE = /svelte|sapper|typhon|\bTRL\b/i;
-  const answers = { language, uiFramework: 'none' } as const;
+/** Anything that names Svelte, its tooling, or a library built on it. */
+const SVELTE = /svelte|sapper|typhon|\bTRL\b/i;
+/** Anything that names Lit or what it is for. */
+const LIT = /\blit\b|web components?|custom elements?|decorators?/i;
 
-  test('has the same files as one with Svelte', async () => {
-    const { destination, result } = await generate(`${language}-none-files`, answers);
-    const expected = expectedFiles(language, 'none');
+/** What a project must not mention, by the UI framework it was generated for. */
+const FOREIGN: Record<UiFramework, RegExp[]> = { svelte: [LIT], lit: [SVELTE], none: [SVELTE, LIT] };
 
-    expect(listFiles(destination)).toEqual(expected);
-    expect([...result.files].sort()).toEqual(expected);
-    expect(expected).toEqual(expectedFiles(language, 'svelte'));
-  });
+describe.each(LANGUAGES.flatMap(language => UI_FRAMEWORKS.map(uiFramework => ({ language, uiFramework }))))(
+  'a $language project with the UI framework $uiFramework',
+  answers => {
+    const { language, uiFramework } = answers;
+    const name = `${language}-${uiFramework}`;
+    const mentionsForeign = (text: string) => FOREIGN[uiFramework].some(pattern => pattern.test(text));
 
-  test('depends on nothing of Svelte', async () => {
-    const { json, read } = await generate(`${language}-none-dependencies`, answers);
-    const manifest = json('package.json') as { scripts: Record<string, string>; devDependencies: object };
+    test('has the same files as any other project in its language', async () => {
+      const { destination, result } = await generate(`${name}-files`, answers);
+      const expected = expectedFiles(language, uiFramework);
 
-    expect(Object.keys(manifest.devDependencies).filter(name => SVELTE.test(name))).toEqual([]);
-    expect(Object.keys(manifest.scripts).filter(name => SVELTE.test(name))).toEqual([]);
-    expect(read('pnpm-workspace.yaml')).not.toMatch(SVELTE);
-  });
+      expect(listFiles(destination)).toEqual(expected);
+      expect([...result.files].sort()).toEqual(expected);
+      expect(expected).toEqual(expectedFiles(language, 'svelte'));
+    });
 
-  test('says nothing of Svelte, in its documentation or anywhere else', async () => {
-    const { destination, read } = await generate(`${language}-none-clean`, answers);
+    test('depends on nothing of the frameworks it was not set up for', async () => {
+      const { json, read } = await generate(`${name}-dependencies`, answers);
+      const manifest = json('package.json') as { scripts: Record<string, string>; devDependencies: object };
 
-    const mentions = listFiles(destination).filter(file => file !== 'pnpm-lock.yaml' && SVELTE.test(read(file)));
+      expect(Object.keys(manifest.devDependencies).filter(mentionsForeign)).toEqual([]);
+      expect(Object.keys(manifest.scripts).filter(mentionsForeign)).toEqual([]);
+      expect(mentionsForeign(read('pnpm-workspace.yaml'))).toBe(false);
+    });
 
-    expect(mentions).toEqual([]);
-  });
+    test('says nothing of them either, in its documentation or anywhere else', async () => {
+      const { destination, read } = await generate(`${name}-clean`, answers);
 
-  test('keeps the rest of its documentation, MyST expressions included', async () => {
-    const { read } = await generate(`${language}-none-docs`, answers);
+      const mentions = listFiles(destination).filter(file => file !== 'pnpm-lock.yaml' && mentionsForeign(read(file)));
 
-    expect(read('docs/developers/why.md')).toContain('It provides nice tools (like an {{HMR}} development server)');
-    expect(read('docs/developers/why.md')).toContain('## ... document with Sphinx?');
-  });
+      expect(mentions).toEqual([]);
+    });
 
-  test('passes its own Prettier check', async () => {
-    const { destination } = await generate(`${language}-none-formatted`, answers);
+    test('keeps the rest of its documentation, MyST expressions included', async () => {
+      const { read } = await generate(`${name}-docs`, answers);
 
-    expect(await unformattedFiles(destination)).toEqual([]);
-  });
-});
+      expect(read('docs/developers/why.md')).toContain('It provides nice tools (like an {{HMR}} development server)');
+      expect(read('docs/developers/why.md')).toContain('## ... document with Sphinx?');
+    });
+
+    test('passes its own Prettier check', async () => {
+      const { destination } = await generate(`${name}-formatted`, answers);
+
+      expect(await unformattedFiles(destination)).toEqual([]);
+    });
+  },
+);
 
 describe('a project with Svelte', () => {
   test('explains the choice, MyST expressions intact', async () => {
@@ -395,5 +406,56 @@ describe('a project with Svelte', () => {
     expect(json('package.json')).toMatchObject({ devDependencies: { svelte: expect.any(String) as string } });
     expect(read(`vite.config.${language === 'typescript' ? 'ts' : 'js'}`)).toContain('preprocess: sveltePreprocess()');
     expect(read('eslint.config.mjs')).toContain('svelte.configs.recommended');
+  });
+});
+
+describe('a project with Lit', () => {
+  test('explains the choice and how to name custom elements', async () => {
+    const { read } = await generate('lit-docs', { uiFramework: 'lit' });
+
+    expect(read('docs/developers/why.md')).toContain('## ... all the `lit` stuff?');
+    expect(read('docs/developers/why.md')).toContain('`arcane-ledger-panel`');
+  });
+
+  test.each(LANGUAGES)(
+    'sets Lit up in the dependencies, the lint rules and the coverage of a %s project',
+    async language => {
+      const { read, json } = await generate(`lit-${language}`, { language, uiFramework: 'lit' });
+      const ext = language === 'typescript' ? 'ts' : 'js';
+
+      expect(json('package.json')).toMatchObject({
+        devDependencies: { lit: expect.any(String) as string, 'eslint-plugin-lit': expect.any(String) as string },
+      });
+      expect(read('eslint.config.mjs')).toContain("lit['flat/recommended']");
+      expect(read(`vite.config.${ext}`)).toContain(`'component/**/*.${ext}'`);
+    },
+  );
+
+  test.each(LANGUAGES)(
+    'lets the entry-point test of a %s project load components that define custom elements more than once',
+    async language => {
+      const { read } = await generate(`lit-entry-test-${language}`, { language, uiFramework: 'lit' });
+      const entryTest = read(`tests/unit/index.test.${language === 'typescript' ? 'ts' : 'js'}`);
+
+      expect(entryTest).toContain("vi.spyOn(customElements, 'define')");
+      expect(entryTest).toContain(
+        'if (!customElements.get(tagName)) define(tagName, elementClass, definitionOptions);',
+      );
+    },
+  );
+
+  test('enables decorators the way Lit recommends, in TypeScript', async () => {
+    const { json, read } = await generate('lit-decorators', { uiFramework: 'lit' });
+
+    expect(json('tsconfig.json')).toMatchObject({
+      compilerOptions: { experimentalDecorators: true, useDefineForClassFields: false },
+    });
+    expect(read('docs/developers/why.md')).toContain('`tsconfig.json` enables decorators');
+  });
+
+  test('points to static properties rather than decorators, in JavaScript', async () => {
+    const { read } = await generate('lit-static', { language: 'javascript', uiFramework: 'lit' });
+
+    expect(read('docs/developers/why.md')).toContain('`static properties`');
   });
 });

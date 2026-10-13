@@ -40,3 +40,23 @@ or simply wrap standard Svelte by extending
 [ApplicationV2](https://foundryvtt.com/api/v14/classes/foundry.applications.api.ApplicationV2.html). Which is better
 depends on your objectives.
 {{/if}}
+{{#if lit}}
+
+## ... all the `lit` stuff?
+
+This module template assumes you will be using [Lit](https://lit.dev) for any UI (rather than the Foundry Handlebars).
+{program}`Lit` is a small library for writing web components, which are part of the browser itself. A component is a
+custom element, so it works wherever HTML does, including inside a window built by extending
+[ApplicationV2](https://foundryvtt.com/api/v14/classes/foundry.applications.api.ApplicationV2.html), and it needs no
+compiler of its own, so `vite` bundles it without a plugin.
+
+Custom element names are shared by everything on the page. Start yours with the module ID, as in
+`{{{moduleId}}}-panel`, to keep clear of other modules.
+
+{{#if typescript}}
+`tsconfig.json` enables decorators (`@customElement`, `@property`) the way {program}`Lit` recommends: with
+`experimentalDecorators`, and with `useDefineForClassFields` off so that class fields do not hide reactive properties.
+{{else}}
+Declare reactive properties in a `static properties` field; decorators are not yet part of the language.
+{{/if}}
+{{/if}}

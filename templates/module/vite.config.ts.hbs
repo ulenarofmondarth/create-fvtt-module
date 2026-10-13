@@ -148,7 +148,11 @@ export default defineConfig(() => {
 {{#if svelte}}
         include: ['index.{{{ext}}}', 'module/**/*.{{{ext}}}', 'component/**/*.svelte'],
 {{else}}
+{{#if lit}}
+        include: ['index.{{{ext}}}', 'module/**/*.{{{ext}}}', 'component/**/*.{{{ext}}}'],
+{{else}}
         include: ['index.{{{ext}}}', 'module/**/*.{{{ext}}}'],
+{{/if}}
 {{/if}}
         reportsDirectory: '../coverage',
         reporter: ['text', 'html', 'lcov'],

@@ -1,6 +1,9 @@
 import js from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import jsdoc from 'eslint-plugin-jsdoc';
+{{#if lit}}
+import { configs as lit } from 'eslint-plugin-lit';
+{{/if}}
 import prettier from 'eslint-plugin-prettier/recommended';
 {{#if svelte}}
 import svelte from 'eslint-plugin-svelte';
@@ -35,6 +38,9 @@ export default defineConfig(
 {{/if}}
 {{#if svelte}}
   svelte.configs.recommended,
+{{/if}}
+{{#if lit}}
+  lit['flat/recommended'],
 {{/if}}
 {{#if typescript}}
   jsdoc.configs['flat/recommended-typescript-error'],

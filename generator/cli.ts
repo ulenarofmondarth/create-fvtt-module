@@ -25,12 +25,20 @@ export function optionName(name: string): string {
 }
 
 /**
+ * @param values - The values to choose from
+ * @returns The values as a phrase, e.g. `a, b or c`
+ */
+function alternatives(values: readonly string[]): string {
+  return [values.slice(0, -1).join(', '), ...values.slice(-1)].filter(Boolean).join(' or ');
+}
+
+/**
  * @returns The usage text, listing an option for every question
  */
 export function usage(): string {
   const options = questions.map(question => {
     const flag = question.type === 'confirm' ? `--[no-]${optionName(question.name)}` : `--${optionName(question.name)}`;
-    const values = question.type === 'select' ? ` (${question.choices.map(choice => choice.value).join(' or ')})` : '';
+    const values = question.type === 'select' ? ` (${alternatives(question.choices.map(choice => choice.value))})` : '';
     return `  ${flag.padEnd(WIDTH)} ${question.message.replace(/[:?]$/, '')}${values}`;
   });
 

@@ -19,7 +19,8 @@ pnpm run format:check
 pnpm test
 pnpm run test:smoke                     # slow, uses the network; run it when the templates or the packaging change
 pnpm run test:smoke --javascript        # the same for a JavaScript project; run it when the templates change
-pnpm run test:smoke --no-ui-framework   # and for a project without Svelte, with and without --javascript
+pnpm run test:smoke --lit               # and for a project set up for Lit, with and without --javascript
+pnpm run test:smoke --no-ui-framework   # and for one without a UI framework, likewise
 ```
 
 Keep pull requests small and focused, with tests for what they change. A bug fix starts with a test that fails

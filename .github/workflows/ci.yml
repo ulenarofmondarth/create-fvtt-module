@@ -39,14 +39,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # The documentation tooling is the same in all of them. Building it for these two covers every page, with
-          # and without the parts that depend on the language and the UI framework.
+          # The documentation tooling is the same in all of them. Building it for these three covers every page, in
+          # each form the language and the UI framework give it.
           - project: TypeScript, Svelte
             options: --docs
+          - project: TypeScript, Lit
+            options: --lit
           - project: TypeScript, no UI framework
             options: --no-ui-framework
           - project: JavaScript, Svelte
             options: --javascript
+          - project: JavaScript, Lit
+            options: --javascript --lit --docs
           - project: JavaScript, no UI framework
             options: --javascript --no-ui-framework --docs
     steps:

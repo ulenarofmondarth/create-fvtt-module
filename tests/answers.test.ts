@@ -152,19 +152,20 @@ describe('the language', () => {
 });
 
 describe('validateUiFramework', () => {
-  test.each(['svelte', 'none'])('accepts %s', framework => {
+  test.each(['svelte', 'lit', 'none'])('accepts %s', framework => {
     expect(validateUiFramework(framework)).toBe(true);
   });
 
-  test.each(['', 'Svelte', 'None', 'react'])('rejects "%s"', framework => {
-    expect(validateUiFramework(framework)).toMatch(/svelte, none/);
+  test.each(['', 'Svelte', 'Lit', 'None', 'react'])('rejects "%s"', framework => {
+    expect(validateUiFramework(framework)).toMatch(/svelte, lit, none/);
   });
 });
 
 describe('the UI framework', () => {
-  test('tells the templates whether to set up Svelte', () => {
-    expect(resolveAnswers(ANSWERS)).toMatchObject({ svelte: true });
-    expect(resolveAnswers({ ...ANSWERS, uiFramework: 'none' })).toMatchObject({ svelte: false });
+  test('tells the templates which one to set up, if any', () => {
+    expect(resolveAnswers(ANSWERS)).toMatchObject({ svelte: true, lit: false });
+    expect(resolveAnswers({ ...ANSWERS, uiFramework: 'lit' })).toMatchObject({ svelte: false, lit: true });
+    expect(resolveAnswers({ ...ANSWERS, uiFramework: 'none' })).toMatchObject({ svelte: false, lit: false });
   });
 
   test('must be one the generator knows', () => {

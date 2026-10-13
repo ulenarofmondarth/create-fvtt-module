@@ -7,7 +7,7 @@ export const LANGUAGES = ['typescript', 'javascript'] as const;
 export type Language = (typeof LANGUAGES)[number];
 
 /** The UI frameworks a module can be set up for, `none` being no framework at all; the first is the default. */
-export const UI_FRAMEWORKS = ['svelte', 'none'] as const;
+export const UI_FRAMEWORKS = ['svelte', 'lit', 'none'] as const;
 
 export type UiFramework = (typeof UI_FRAMEWORKS)[number];
 
@@ -63,6 +63,8 @@ export interface TemplateData extends Answers {
   ext: 'ts' | 'js';
   /** Whether {@link Answers.uiFramework} is Svelte, for the templates to branch on. */
   svelte: boolean;
+  /** Whether {@link Answers.uiFramework} is Lit, for the templates to branch on. */
+  lit: boolean;
 }
 
 /** The result of checking an answer: `true`, or the reason it is not acceptable. */
@@ -239,5 +241,6 @@ export function resolveAnswers(answers: Answers, now = new Date()): TemplateData
     typescript: answers.language === 'typescript',
     ext: answers.language === 'typescript' ? 'ts' : 'js',
     svelte: answers.uiFramework === 'svelte',
+    lit: answers.uiFramework === 'lit',
   };
 }

@@ -7,9 +7,10 @@
  * Going through the packed tarball is the point: it is the only check that sees what users get, including whatever a
  * package manager leaves out of the package.
  *
- * Usage: `node scripts/smoke.ts [--javascript] [--no-ui-framework] [--docs] [--keep] [--update-lockfile]`
+ * Usage: `node scripts/smoke.ts [--javascript] [--lit | --no-ui-framework] [--docs] [--keep] [--update-lockfile]`
  *
- * `--javascript` generates a JavaScript project rather than a TypeScript one; `--no-ui-framework` one without Svelte;
+ * `--javascript` generates a JavaScript project rather than a TypeScript one; `--lit` one set up for Lit rather than
+ * Svelte, and `--no-ui-framework` one for neither;
  * `--docs` also builds the Sphinx documentation (needs Docker); `--keep` leaves the generated project in place;
  * `--update-lockfile` copies the lockfile of the project that just passed back into the templates.
  * This installs the generated project's dependencies from the network, so it is slow and not part of `pnpm test`.
@@ -25,7 +26,7 @@ import type { Answers, Language, UiFramework } from '../generator/answers.ts';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const flags = new Set(process.argv.slice(2));
 const language: Language = flags.has('--javascript') ? 'javascript' : 'typescript';
-const uiFramework: UiFramework = flags.has('--no-ui-framework') ? 'none' : 'svelte';
+const uiFramework: UiFramework = flags.has('--no-ui-framework') ? 'none' : flags.has('--lit') ? 'lit' : 'svelte';
 
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'create-fvtt-module-smoke-'));
 const destination = path.join(work, 'smoke-module');

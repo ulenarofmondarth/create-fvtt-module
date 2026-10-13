@@ -157,6 +157,7 @@ export const questions: readonly Question[] = [
     message: 'UI framework to set the project up for:',
     choices: [
       { value: 'svelte', name: 'Svelte' },
+      { value: 'lit', name: 'Lit' },
       { value: 'none', name: 'None' },
     ],
     default: DEFAULT_UI_FRAMEWORK,

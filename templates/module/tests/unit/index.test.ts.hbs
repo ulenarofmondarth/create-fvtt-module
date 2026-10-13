@@ -10,6 +10,16 @@ import { installFoundryMocks } from './mocks/foundry';
  */
 async function loadModule(options: FoundryMockOptions = {}) {
   const mocks = installFoundryMocks(options);
+{{#if lit}}
+
+  // A custom element can be defined only once on a page, but every test loads the module, and with it the components
+  // it imports, afresh. Keep the first definition of each element rather than fail on the second.
+  const define = customElements.define.bind(customElements);
+  vi.spyOn(customElements, 'define').mockImplementation((tagName, elementClass, definitionOptions) => {
+    if (!customElements.get(tagName)) define(tagName, elementClass, definitionOptions);
+  });
+
+{{/if}}
   vi.resetModules();
   await import('../../src/index');
   return mocks;

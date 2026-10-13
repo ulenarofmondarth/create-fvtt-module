@@ -10,7 +10,7 @@ The generated project has no module code beyond an entry point that logs on `ini
 
 - strict TypeScript with the League `fvtt-types`, or plain JavaScript if you prefer, bundled by Vite into one ES
   module
-- Svelte 5 ready for UI, unless you choose to do without a UI framework
+- Svelte 5 or Lit ready for UI, unless you choose to do without a UI framework
 - Vitest unit tests with Foundry mocks and enforced coverage thresholds
 - Playwright end-to-end tests against a real, pinned Foundry VTT server in Docker (Chromium, Firefox, WebKit)
 - ESLint, Prettier and, in a TypeScript project, type-checked lint rules and (with Svelte) `svelte-check`
@@ -53,7 +53,7 @@ You are asked for:
 | `systemUrl`        | The release `.zip` of that system, pinned for the tests. Known for `dnd5e`, asked for otherwise |
 | `restrictToSystem` | Whether `module.json` declares that system as required                                          |
 | `language`         | `typescript` (the default) or `javascript`: what the source, tests and scripts are written in   |
-| `uiFramework`      | `svelte` (the default) or `none`: the UI framework the project is set up for                    |
+| `uiFramework`      | `svelte` (the default), `lit` or `none`: the UI framework the project is set up for             |
 | `destination`      | Where to create the project. Defaults to `./<moduleId>`                                         |
 | `gitInit`          | Whether to run `git init` there                                                                 |
 | `install`          | Whether to run `pnpm install` there                                                             |
@@ -65,12 +65,19 @@ TypeScript: the same source, tests and scripts as `.js` files, and no `typescrip
 `pnpm typecheck` or `svelte-check`. Its ESLint configuration lists the Foundry globals instead of reading them from
 types, and its documentation and workflows describe the checks it actually has.
 
-### Svelte or no UI framework
+### Svelte, Lit or no UI framework
 
-A project is set up for Svelte 5 by default: the Vite plugin and preprocessor, the ESLint plugin, `svelte-check` in a
-TypeScript project, and a page of the documentation on why. Answer `none` (`--ui-framework none`) for a project with
-none of that, and no mention of Svelte anywhere in it: build your UI on Foundry's own `ApplicationV2`, or add the
-framework you prefer. The choice is independent of the language, so there are four kinds of project.
+A project is set up for one UI framework, or for none. Only the tooling is set up; no component is generated.
+
+| `--ui-framework`   | What the project gets                                                                           |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| `svelte` (default) | Svelte 5, its Vite plugin and preprocessor, its ESLint plugin, and `svelte-check` in TypeScript |
+| `lit`              | [Lit](https://lit.dev) 3, its ESLint plugin, and decorators enabled in TypeScript               |
+| `none`             | Neither: build your UI on Foundry's own `ApplicationV2`, or add the framework you prefer        |
+
+Either framework also gets a section of the project's documentation on why it is there, and coverage of
+`src/component`. A project mentions no framework but its own. The choice is independent of the language, so there are
+six kinds of project.
 
 The generator refuses to write into a directory that already has content unless it is run with `--force`.
 
@@ -158,8 +165,9 @@ When editing templates:
 - Wrap whatever only one language has in `{{#if typescript}}…{{else}}…{{/if}}`, and write the extension of a source file
   as `{{{ext}}}` wherever one is named (`vite.config.{{{ext}}}`). That includes prose: a JavaScript project must not
   mention TypeScript, and a test checks that it does not.
-- Likewise wrap everything to do with Svelte in `{{#if svelte}}…{{/if}}`: a project without a UI framework must not
-  mention Svelte, and a test checks that too. Handlebars has no "and", so nest the blocks for what needs both.
+- Likewise wrap everything to do with a UI framework in `{{#if svelte}}…{{/if}}` or `{{#if lit}}…{{/if}}`: a project
+  must not mention a framework it was not set up for, and a test checks that too. Handlebars has no "and", so nest the
+  blocks for what needs both.
 - Handlebars reads `{{{` and `}}}` wherever they occur, so a block cannot sit directly inside braces, as in a glob like
   `*.{ts,js}`. Give each alternative its own complete line instead.
 - Do not add a file named `.gitignore`, `.npmrc` or `pnpm-lock.yaml`: package managers leave those out of a published
@@ -168,28 +176,31 @@ When editing templates:
 
 ### The template lockfiles
 
-Each combination of language and UI framework has different dependencies, so each has its own lockfile:
-`templates/typescript-svelte/_pnpm-lock.yaml`, `templates/typescript-none/_pnpm-lock.yaml` and the two for
-JavaScript. The one for the project's combination is copied into it as `pnpm-lock.yaml`, so each new project starts with the dependency versions the template was last tested with. This matters most for
-`fvtt-types`, which tracks the `main` branch of its repository: `pnpm-workspace.yaml` has to name the exact commit
-whose build script is allowed to run, and the lockfile keeps new TypeScript projects on that commit.
+Each combination of language and UI framework has different dependencies, so each has its own lockfile, such as
+`templates/typescript-svelte/_pnpm-lock.yaml` and `templates/javascript-lit/_pnpm-lock.yaml`. The one for the
+project's combination is copied into it as `pnpm-lock.yaml`, so each new project starts with the dependency versions
+the template was last tested with. This matters most for `fvtt-types`, which tracks the `main` branch of its
+repository: `pnpm-workspace.yaml` has to name the exact commit whose build script is allowed to run, and the lockfile
+keeps new TypeScript projects on that commit.
 
 To move the template to current versions:
 
-1. Delete the four lockfiles.
+1. Delete the six lockfiles.
 2. Run the smoke test once for each combination, with `--update-lockfile`:
 
    ```sh
    pnpm run test:smoke --update-lockfile
+   pnpm run test:smoke --lit --update-lockfile
    pnpm run test:smoke --no-ui-framework --update-lockfile
    pnpm run test:smoke --javascript --update-lockfile
+   pnpm run test:smoke --javascript --lit --update-lockfile
    pnpm run test:smoke --javascript --no-ui-framework --update-lockfile
    ```
 
 3. If a TypeScript install stops with `ERR_PNPM_IGNORED_BUILDS` for `foundry-vtt-types`, copy the package key from
    the error message over the old one in `templates/module/pnpm-workspace.yaml.hbs`, and run the command again.
 
-After changing the dependencies in `templates/module/package.json.hbs`, update all four lockfiles the same way: the
+After changing the dependencies in `templates/module/package.json.hbs`, update all six lockfiles the same way: the
 generated CI installs with `--frozen-lockfile`.
 
 ## Working on the generator
@@ -202,7 +213,8 @@ pnpm test                               # generates into temporary directories a
 pnpm build                              # compiles generator/ to dist/, which is what the package ships
 pnpm run test:smoke                     # packs the package, installs it, generates a project and runs its own checks; slow, uses the network
 pnpm run test:smoke --javascript        # the same, for a JavaScript project
-pnpm run test:smoke --no-ui-framework   # the same, for a project without Svelte; combines with --javascript
+pnpm run test:smoke --lit               # the same, for a project set up for Lit; combines with --javascript
+pnpm run test:smoke --no-ui-framework   # the same, for a project without a UI framework; combines with --javascript
 pnpm run test:smoke --docs              # any of them, plus the Docker build of the documentation
 ```
 

@@ -131,14 +131,32 @@ describe('the command line', () => {
     expect(fs.readFileSync(path.join(destination, 'package.json'), 'utf8')).not.toContain('svelte');
   });
 
+  test('sets the project up for Lit when asked to', async () => {
+    const destination = path.join(work, 'lit');
+
+    await main([
+      destination,
+      ...REQUIRED,
+      '--author-name',
+      'A. Scribe',
+      '--ui-framework',
+      'lit',
+      '--yes',
+      '--no-git-init',
+      '--no-install',
+    ]);
+
+    expect(fs.readFileSync(path.join(destination, 'package.json'), 'utf8')).toContain('"lit"');
+  });
+
   test('rejects a UI framework it does not know, naming the ones it does', async () => {
     await expect(main([...REQUIRED, '--ui-framework', 'react', '--yes'])).rejects.toThrow(
-      'Invalid --ui-framework "react": Choose one of: svelte, none',
+      'Invalid --ui-framework "react": Choose one of: svelte, lit, none',
     );
   });
 
   test('lists the UI frameworks in the usage text', () => {
-    expect(usage()).toMatch(/--ui-framework\s+.*\(svelte or none\)/);
+    expect(usage()).toMatch(/--ui-framework\s+.*\(svelte, lit or none\)/);
   });
 
   test('lists the languages in the usage text', () => {

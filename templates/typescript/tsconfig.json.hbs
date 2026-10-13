@@ -16,6 +16,10 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true,
+{{#if lit}}
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+{{/if}}
 {{#unless svelte}}
     "verbatimModuleSyntax": true,
     "esModuleInterop": true,
