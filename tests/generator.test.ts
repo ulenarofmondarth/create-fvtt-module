@@ -181,6 +181,21 @@ describe('the module generator', () => {
     expect(dirty).toEqual([]);
   });
 
+  test('heads the README with badges for the project’s own repository', async () => {
+    const { read } = await generate('badges', { foundryVersion: '15.100.0' });
+    const repository = 'https://github.com/Scribes-Guild/arcane-ledger';
+
+    expect(read('README.md')).toContain(
+      `[![CI](${repository}/actions/workflows/ci.yml/badge.svg?branch=main)](${repository}/actions/workflows/ci.yml)`,
+    );
+    expect(read('README.md')).toContain(`(${repository}/actions/workflows/release.yml/badge.svg)`);
+    expect(read('README.md')).toContain('https://img.shields.io/github/v/release/Scribes-Guild/arcane-ledger');
+    expect(read('README.md')).toContain('https://img.shields.io/badge/Foundry%20VTT-v15%2B-ff6400');
+    expect(read('README.md')).toContain(
+      '(https://img.shields.io/github/license/Scribes-Guild/arcane-ledger)](LICENSE)',
+    );
+  });
+
   test('ends the README and the contributing guide with a disclosure scoped to the scaffold', async () => {
     const { read } = await generate('disclosure');
 
