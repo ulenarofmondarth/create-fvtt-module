@@ -1,0 +1,35 @@
+/**
+ * semantic-release configuration.
+ *
+ * Versions follow SemVer from the Conventional Commits history: `fix` → patch, `feat` → minor, and a `!` or
+ * `BREAKING CHANGE:` footer → major.
+ */
+export default {
+  branches: ['main'],
+  tagFormat: 'v${version}',
+  plugins: [
+    ['@semantic-release/commit-analyzer', { preset: 'conventionalcommits' }],
+    ['@semantic-release/release-notes-generator', { preset: 'conventionalcommits' }],
+    '@semantic-release/changelog',
+    // Stamps the version into module.json and docs/conf.py, builds, and zips releases/module-v<version>.zip.
+    ['@semantic-release/exec', { prepareCmd: 'node scripts/release/package.{{{ext}}} ${nextRelease.version}' }],
+    // Committing module.json to main also keeps the manifest in the repository current.
+    [
+      '@semantic-release/git',
+      {
+        assets: ['CHANGELOG.md', 'module.json', 'docs/conf.py'],
+        message: 'chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}',
+      },
+    ],
+    // module.json is attached so that releases/latest/download/module.json is a stable manifest URL for Foundry.
+    [
+      '@semantic-release/github',
+      {
+        assets: [
+          { path: 'releases/module-v*.zip', label: 'Foundry VTT module package' },
+          { path: 'module.json', label: 'Foundry VTT manifest' },
+        ],
+      },
+    ],
+  ],
+};

@@ -38,9 +38,6 @@ The `.github/workflows` assume this documentation system is used when building a
 
 If you replace the documentation system you will need to review and update:
 
-`.github/workflows/build-and-deploy-docs.yml`
-: This is responsible for the release build of documentation and publishing to {program}`github pages`.
-
 `.github/workflows/ci.yml`
 : The `docs` job builds the documentation for every pull request.
 
@@ -51,5 +48,5 @@ If you replace the documentation system you will need to review and update:
 : Update (or remove) the `docs` service and its image.
 
 [^f1]: Well, at least something that understands Github actions and workflow format. Try
-    [act](https://github.com/nektos/act), this can be usefull for local testing of workflows. It is also the workflow
+    [act](https://github.com/nektos/act), this can be useful for local testing of workflows. It is also the workflow
     system used by [Gitea](https://about.gitea.com/) (if you fancy an alternative web-based repository host).

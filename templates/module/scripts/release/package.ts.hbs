@@ -1,0 +1,108 @@
+#!/usr/bin/env node
+
+/**
+ * Prepare a release: stamp the version into the manifest and docs, build the bundle and zip the Foundry package.
+ *
+ * Run by semantic-release (see `release.config.js`) as `node scripts/release/package.{{{ext}}} <version>`.
+ */
+
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const ROOT = path.resolve(import.meta.dirname, '../..');
+const MANIFEST = path.join(ROOT, 'module.json');
+const DOCS_CONF = path.join(ROOT, 'docs/conf.py');
+const DIST = path.join(ROOT, 'dist');
+const RELEASES = path.join(ROOT, 'releases');
+
+/** Files and directories shipped in the Foundry package, when present. */
+const PACKAGE_CONTENTS = ['module.json', 'dist', 'packs', 'LICENSE', 'README.md', 'CHANGELOG.md'];
+
+interface Manifest {
+  url: string;
+  version: string;
+  manifest: string;
+  download: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Name of the release archive for a version.
+ * @param version - The release version, without a leading `v`
+ * @returns The archive file name
+ */
+function archiveName(version: string): string {
+  return `module-v${version}.zip`;
+}
+
+/**
+ * Write the release version and its versioned download link into `module.json`.
+ * @param version - The release version, without a leading `v`
+ */
+function stampManifest(version: string): void {
+  const manifest = JSON.parse(fs.readFileSync(MANIFEST, 'utf8')) as Manifest;
+
+  manifest.version = version;
+  // `manifest` stays on the stable "latest" URL so installed copies keep finding updates.
+  manifest.manifest = `${manifest.url}/releases/latest/download/module.json`;
+  manifest.download = `${manifest.url}/releases/download/v${version}/${archiveName(version)}`;
+
+  fs.writeFileSync(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
+  // Keep the committed manifest in the project's formatting so the CI format check still passes.
+  execFileSync('pnpm', ['exec', 'prettier', '--write', MANIFEST], { cwd: ROOT, stdio: 'inherit' });
+}
+
+/**
+ * Write the release version into the Sphinx configuration.
+ * @param version - The release version, without a leading `v`
+ */
+function stampDocs(version: string): void {
+  const conf = fs.readFileSync(DOCS_CONF, 'utf8');
+  const stamped = conf.replace(/^release\s*=.*$/m, `release = '${version}'`);
+  if (stamped === conf && !conf.includes(`release = '${version}'`)) {
+    throw new Error(`No "release = ..." line found in ${DOCS_CONF}`);
+  }
+
+  fs.writeFileSync(DOCS_CONF, stamped);
+}
+
+/**
+ * Build the bundle from a clean `dist/` so nothing stale ends up in the package.
+ */
+function build(): void {
+  fs.rmSync(DIST, { recursive: true, force: true });
+  execFileSync('pnpm', ['build'], { cwd: ROOT, stdio: 'inherit' });
+}
+
+/**
+ * Zip the package contents into `releases/module-v<version>.zip`, with `module.json` at the archive root.
+ * @param version - The release version, without a leading `v`
+ * @returns The path of the created archive
+ */
+function createArchive(version: string): string {
+  const archive = path.join(RELEASES, archiveName(version));
+  const contents = PACKAGE_CONTENTS.filter(entry => fs.existsSync(path.join(ROOT, entry)));
+
+  fs.mkdirSync(RELEASES, { recursive: true });
+  fs.rmSync(archive, { force: true });
+{{#if typescript}}
+  // Type declarations are for developers consuming the API, not for the Foundry runtime.
+  execFileSync('zip', ['-r', '-D', archive, ...contents, '-x', '*.d.ts'], { cwd: ROOT, stdio: 'inherit' });
+{{else}}
+  execFileSync('zip', ['-r', '-D', archive, ...contents], { cwd: ROOT, stdio: 'inherit' });
+{{/if}}
+
+  return archive;
+}
+
+const releaseVersion = process.argv[2];
+if (!releaseVersion || !/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(releaseVersion)) {
+  console.error('Usage: node scripts/release/package.{{{ext}}} <version>   (e.g. 1.2.3)');
+  process.exit(1);
+}
+
+stampManifest(releaseVersion);
+stampDocs(releaseVersion);
+build();
+console.log(`Created ${path.relative(ROOT, createArchive(releaseVersion))}`);

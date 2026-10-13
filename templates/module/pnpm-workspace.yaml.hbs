@@ -1,0 +1,13 @@
+{{#if typescript}}
+blockExoticSubdeps: false
+{{/if}}
+allowBuilds:
+{{#if typescript}}
+  "@league-of-foundry-developers/foundry-vtt-types@https://codeload.github.com/League-of-Foundry-Developers/foundry-vtt-types/tar.gz/27bf7b9bac68a74a5346c7ca44432917d9f41bdb": true
+{{/if}}
+  "@parcel/watcher": true
+  esbuild: true
+{{#if typescript}}
+  foundry-vtt-types: true
+{{/if}}
+  svelte-preprocess: true
