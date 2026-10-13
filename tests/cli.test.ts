@@ -100,9 +100,9 @@ describe('the command line', () => {
   });
 
   test('rejects a language it does not know, naming the ones it does', async () => {
-    await expect(main([...REQUIRED, '--language', 'coffeescript', '--yes'])).rejects.toThrow(
-      'Invalid --language "coffeescript": Choose one of: typescript, javascript',
-    );
+    await expect(
+      main([...REQUIRED, '--author-name', 'A. Scribe', '--language', 'coffeescript', '--yes']),
+    ).rejects.toThrow('Invalid --language "coffeescript": Choose one of: typescript, javascript');
   });
 
   test('sets the project up for Svelte unless told otherwise', async () => {
@@ -150,7 +150,7 @@ describe('the command line', () => {
   });
 
   test('rejects a UI framework it does not know, naming the ones it does', async () => {
-    await expect(main([...REQUIRED, '--ui-framework', 'react', '--yes'])).rejects.toThrow(
+    await expect(main([...REQUIRED, '--author-name', 'A. Scribe', '--ui-framework', 'react', '--yes'])).rejects.toThrow(
       'Invalid --ui-framework "react": Choose one of: svelte, lit, none',
     );
   });
