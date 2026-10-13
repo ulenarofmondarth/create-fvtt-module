@@ -6,6 +6,11 @@ export const LANGUAGES = ['typescript', 'javascript'] as const;
 
 export type Language = (typeof LANGUAGES)[number];
 
+/** The UI frameworks a module can be set up for, `none` being no framework at all; the first is the default. */
+export const UI_FRAMEWORKS = ['svelte', 'none'] as const;
+
+export type UiFramework = (typeof UI_FRAMEWORKS)[number];
+
 /** What the user is asked for. Everything else in the generated project is derived from these. */
 export interface Answers {
   /** Foundry package ID, also the name of the built bundle. */
@@ -33,6 +38,8 @@ export interface Answers {
   restrictToSystem: boolean;
   /** What the module source, its tests and its scripts are written in. */
   language: Language;
+  /** The UI framework the build, the lint rules and the documentation are set up for. */
+  uiFramework: UiFramework;
   /** Directory to generate into, absolute or relative to the working directory. */
   destination: string;
   gitInit: boolean;
@@ -54,6 +61,8 @@ export interface TemplateData extends Answers {
   typescript: boolean;
   /** Extension of the project's source files: `ts` or `js`. */
   ext: 'ts' | 'js';
+  /** Whether {@link Answers.uiFramework} is Svelte, for the templates to branch on. */
+  svelte: boolean;
 }
 
 /** The result of checking an answer: `true`, or the reason it is not acceptable. */
@@ -67,6 +76,7 @@ const KNOWN_SYSTEM_URLS: Record<string, string> = {
 export const DEFAULT_FOUNDRY_VERSION = '14.368.0';
 export const DEFAULT_SYSTEM_ID = 'dnd5e';
 export const DEFAULT_LANGUAGE: Language = 'typescript';
+export const DEFAULT_UI_FRAMEWORK: UiFramework = 'svelte';
 
 /** The oldest Foundry VTT generation the templates target. */
 const MINIMUM_FOUNDRY_GENERATION = 14;
@@ -132,6 +142,14 @@ export function validateArchiveUrl(value: string): Validation {
  */
 export function validateLanguage(value: string): Validation {
   return (LANGUAGES as readonly string[]).includes(value) ? true : `Choose one of: ${LANGUAGES.join(', ')}`;
+}
+
+/**
+ * @param value - The candidate UI framework
+ * @returns `true`, or the reason the framework is not acceptable
+ */
+export function validateUiFramework(value: string): Validation {
+  return (UI_FRAMEWORKS as readonly string[]).includes(value) ? true : `Choose one of: ${UI_FRAMEWORKS.join(', ')}`;
 }
 
 /**
@@ -202,6 +220,7 @@ export function resolveAnswers(answers: Answers, now = new Date()): TemplateData
     ['systemId', validateModuleId(answers.systemId)],
     ['systemUrl', validateArchiveUrl(answers.systemUrl)],
     ['language', validateLanguage(answers.language)],
+    ['uiFramework', validateUiFramework(answers.uiFramework)],
     ['destination', required('The destination directory')(answers.destination)],
   ];
   for (const [name, result] of checks) {
@@ -219,5 +238,6 @@ export function resolveAnswers(answers: Answers, now = new Date()): TemplateData
     year: String(now.getFullYear()),
     typescript: answers.language === 'typescript',
     ext: answers.language === 'typescript' ? 'ts' : 'js',
+    svelte: answers.uiFramework === 'svelte',
   };
 }

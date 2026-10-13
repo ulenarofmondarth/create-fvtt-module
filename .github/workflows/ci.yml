@@ -33,17 +33,22 @@ jobs:
       - run: pnpm build
 
   smoke:
-    name: Pack, generate a ${{ matrix.language }} project and run its checks
+    name: Pack, generate a project (${{ matrix.project }}) and run its checks
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - language: TypeScript
+          # The documentation tooling is the same in all of them. Building it for these two covers every page, with
+          # and without the parts that depend on the language and the UI framework.
+          - project: TypeScript, Svelte
             options: --docs
-          # The documentation tooling is the same in both; building it once is enough.
-          - language: JavaScript
+          - project: TypeScript, no UI framework
+            options: --no-ui-framework
+          - project: JavaScript, Svelte
             options: --javascript
+          - project: JavaScript, no UI framework
+            options: --javascript --no-ui-framework --docs
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/setup@v2

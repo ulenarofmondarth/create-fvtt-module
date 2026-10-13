@@ -1,8 +1,9 @@
-import type { Answers, Language, Validation } from './answers.ts';
+import type { Answers, Validation } from './answers.ts';
 import {
   DEFAULT_FOUNDRY_VERSION,
   DEFAULT_LANGUAGE,
   DEFAULT_SYSTEM_ID,
+  DEFAULT_UI_FRAMEWORK,
   defaultSystemUrl,
   gitConfig,
   required,
@@ -35,14 +36,19 @@ export interface ConfirmQuestion {
   default: boolean;
 }
 
-/** A question answered by picking one of a fixed set of values. */
-export interface SelectQuestion {
+/**
+ * A question answered by picking one of a fixed set of values.
+ * @template K - The answer the question settles
+ */
+export interface SelectQuestionFor<K extends keyof Answers> {
   type: 'select';
-  name: AnswersOfType<Language>;
+  name: K;
   message: string;
-  choices: readonly { value: Language; name: string }[];
-  default: Language;
+  choices: readonly { value: Answers[K]; name: string }[];
+  default: Answers[K];
 }
+
+export type SelectQuestion = SelectQuestionFor<'language'> | SelectQuestionFor<'uiFramework'>;
 
 export type Question = InputQuestion | ConfirmQuestion | SelectQuestion;
 
@@ -144,6 +150,16 @@ export const questions: readonly Question[] = [
       { value: 'javascript', name: 'JavaScript' },
     ],
     default: DEFAULT_LANGUAGE,
+  },
+  {
+    type: 'select',
+    name: 'uiFramework',
+    message: 'UI framework to set the project up for:',
+    choices: [
+      { value: 'svelte', name: 'Svelte' },
+      { value: 'none', name: 'None' },
+    ],
+    default: DEFAULT_UI_FRAMEWORK,
   },
   {
     type: 'input',

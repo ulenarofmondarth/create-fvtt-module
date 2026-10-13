@@ -1,15 +1,26 @@
 {
+{{#if svelte}}
   "extends": "@tsconfig/svelte/tsconfig.json",
+{{/if}}
   "compilerOptions": {
     "moduleResolution": "bundler",
     "module": "esnext",
     "target": "esnext",
     "lib": ["esnext", "dom"],
+{{#if svelte}}
     "types": ["svelte", "fvtt-types", "node", "vitest/importMeta"],
+{{else}}
+    "types": ["fvtt-types", "node", "vitest/importMeta"],
+{{/if}}
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true,
+{{#unless svelte}}
+    "verbatimModuleSyntax": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+{{/unless}}
     "rootDir": "./src",
     "paths": {
       "@module/*": ["./src/module/*"]
@@ -19,5 +30,9 @@
     "declarationDir": "./dist"
   },
   "include": ["src/**/*"],
+{{#if svelte}}
   "exclude": ["./node_modules/*", "./__sapper__/*", "./public/*"]
+{{else}}
+  "exclude": ["./node_modules/*", "./public/*"]
+{{/if}}
 }

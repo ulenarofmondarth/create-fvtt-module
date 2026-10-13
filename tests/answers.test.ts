@@ -11,6 +11,7 @@ import {
   validateArchiveUrl,
   validateFoundryVersion,
   validateLanguage,
+  validateUiFramework,
   validateModuleId,
   validateOptionalUrl,
 } from '../generator/answers.ts';
@@ -30,6 +31,7 @@ export const ANSWERS: Answers = {
   systemUrl: 'https://example.com/dnd5e.zip',
   restrictToSystem: false,
   language: 'typescript',
+  uiFramework: 'svelte',
   destination: 'out',
   gitInit: false,
   install: false,
@@ -145,6 +147,29 @@ describe('the language', () => {
   test('must be one the generator knows', () => {
     expect(() => resolveAnswers({ ...ANSWERS, language: 'coffeescript' as Answers['language'] })).toThrow(
       /Invalid language "coffeescript"/,
+    );
+  });
+});
+
+describe('validateUiFramework', () => {
+  test.each(['svelte', 'none'])('accepts %s', framework => {
+    expect(validateUiFramework(framework)).toBe(true);
+  });
+
+  test.each(['', 'Svelte', 'None', 'react'])('rejects "%s"', framework => {
+    expect(validateUiFramework(framework)).toMatch(/svelte, none/);
+  });
+});
+
+describe('the UI framework', () => {
+  test('tells the templates whether to set up Svelte', () => {
+    expect(resolveAnswers(ANSWERS)).toMatchObject({ svelte: true });
+    expect(resolveAnswers({ ...ANSWERS, uiFramework: 'none' })).toMatchObject({ svelte: false });
+  });
+
+  test('must be one the generator knows', () => {
+    expect(() => resolveAnswers({ ...ANSWERS, uiFramework: 'react' as Answers['uiFramework'] })).toThrow(
+      /Invalid uiFramework "react"/,
     );
   });
 });

@@ -6,7 +6,8 @@ import path from 'node:path';
 import * as prettier from 'prettier';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
-import type { Answers, Language } from '../generator/answers.ts';
+import type { Answers, Language, UiFramework } from '../generator/answers.ts';
+import { LANGUAGES } from '../generator/answers.ts';
 import { generate as generateProject } from '../generator/index.ts';
 import { listFiles, targetPath } from '../generator/scaffold.ts';
 import { ANSWERS } from './answers.test.ts';
@@ -21,12 +22,15 @@ let work: string;
 
 /**
  * @param language - The language of a generated project
- * @returns The files such a project is made of, from the shared templates and those of its language
+ * @param uiFramework - Its UI framework
+ * @returns The files such a project is made of: from the shared templates, those of its language, and those of its
+ *   language and UI framework together
  */
-function expectedFiles(language: Language): string[] {
-  const files = ['module', language].flatMap(tree =>
-    listFiles(path.join(TEMPLATES, tree)).map(source => targetPath(source, language)),
-  );
+function expectedFiles(language: Language, uiFramework: UiFramework = 'svelte'): string[] {
+  const files = ['module', language, `${language}-${uiFramework}`]
+    .map(tree => path.join(TEMPLATES, tree))
+    .filter(tree => fs.existsSync(tree))
+    .flatMap(tree => listFiles(tree).map(source => targetPath(source, language)));
   return [...new Set(files)].sort();
 }
 
@@ -330,5 +334,66 @@ describe('a JavaScript project', () => {
     const { destination } = await generate('js-formatted', { language: 'javascript' });
 
     expect(await unformattedFiles(destination)).toEqual([]);
+  });
+});
+
+describe.each(LANGUAGES)('a %s project without a UI framework', language => {
+  /** Anything that names Svelte, its tooling, or a library built on it. */
+  const SVELTE = /svelte|sapper|typhon|\bTRL\b/i;
+  const answers = { language, uiFramework: 'none' } as const;
+
+  test('has the same files as one with Svelte', async () => {
+    const { destination, result } = await generate(`${language}-none-files`, answers);
+    const expected = expectedFiles(language, 'none');
+
+    expect(listFiles(destination)).toEqual(expected);
+    expect([...result.files].sort()).toEqual(expected);
+    expect(expected).toEqual(expectedFiles(language, 'svelte'));
+  });
+
+  test('depends on nothing of Svelte', async () => {
+    const { json, read } = await generate(`${language}-none-dependencies`, answers);
+    const manifest = json('package.json') as { scripts: Record<string, string>; devDependencies: object };
+
+    expect(Object.keys(manifest.devDependencies).filter(name => SVELTE.test(name))).toEqual([]);
+    expect(Object.keys(manifest.scripts).filter(name => SVELTE.test(name))).toEqual([]);
+    expect(read('pnpm-workspace.yaml')).not.toMatch(SVELTE);
+  });
+
+  test('says nothing of Svelte, in its documentation or anywhere else', async () => {
+    const { destination, read } = await generate(`${language}-none-clean`, answers);
+
+    const mentions = listFiles(destination).filter(file => file !== 'pnpm-lock.yaml' && SVELTE.test(read(file)));
+
+    expect(mentions).toEqual([]);
+  });
+
+  test('keeps the rest of its documentation, MyST expressions included', async () => {
+    const { read } = await generate(`${language}-none-docs`, answers);
+
+    expect(read('docs/developers/why.md')).toContain('It provides nice tools (like an {{HMR}} development server)');
+    expect(read('docs/developers/why.md')).toContain('## ... document with Sphinx?');
+  });
+
+  test('passes its own Prettier check', async () => {
+    const { destination } = await generate(`${language}-none-formatted`, answers);
+
+    expect(await unformattedFiles(destination)).toEqual([]);
+  });
+});
+
+describe('a project with Svelte', () => {
+  test('explains the choice, MyST expressions intact', async () => {
+    const { read } = await generate('svelte-docs');
+
+    expect(read('docs/developers/why.md')).toContain('{program}`Svelte` is ({{IMHO}}) a more powerful');
+  });
+
+  test.each(LANGUAGES)('sets Svelte up in the build and the lint rules of a %s project', async language => {
+    const { read, json } = await generate(`svelte-${language}`, { language });
+
+    expect(json('package.json')).toMatchObject({ devDependencies: { svelte: expect.any(String) as string } });
+    expect(read(`vite.config.${language === 'typescript' ? 'ts' : 'js'}`)).toContain('preprocess: sveltePreprocess()');
+    expect(read('eslint.config.mjs')).toContain('svelte.configs.recommended');
   });
 });

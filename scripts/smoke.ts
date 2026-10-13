@@ -7,9 +7,10 @@
  * Going through the packed tarball is the point: it is the only check that sees what users get, including whatever a
  * package manager leaves out of the package.
  *
- * Usage: `node scripts/smoke.ts [--javascript] [--docs] [--keep] [--update-lockfile]`
+ * Usage: `node scripts/smoke.ts [--javascript] [--no-ui-framework] [--docs] [--keep] [--update-lockfile]`
  *
- * `--javascript` generates a JavaScript project rather than a TypeScript one; `--docs` also builds the Sphinx documentation (needs Docker); `--keep` leaves the generated project in place;
+ * `--javascript` generates a JavaScript project rather than a TypeScript one; `--no-ui-framework` one without Svelte;
+ * `--docs` also builds the Sphinx documentation (needs Docker); `--keep` leaves the generated project in place;
  * `--update-lockfile` copies the lockfile of the project that just passed back into the templates.
  * This installs the generated project's dependencies from the network, so it is slow and not part of `pnpm test`.
  */
@@ -19,11 +20,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import type { Answers, Language } from '../generator/answers.ts';
+import type { Answers, Language, UiFramework } from '../generator/answers.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const flags = new Set(process.argv.slice(2));
 const language: Language = flags.has('--javascript') ? 'javascript' : 'typescript';
+const uiFramework: UiFramework = flags.has('--no-ui-framework') ? 'none' : 'svelte';
 
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'create-fvtt-module-smoke-'));
 const destination = path.join(work, 'smoke-module');
@@ -44,6 +46,7 @@ const answers: Answers = {
   systemUrl: 'https://github.com/foundryvtt/dnd5e/releases/download/release-5.3.3/dnd5e-release-5.3.3.zip',
   restrictToSystem: true,
   language,
+  uiFramework,
   destination,
   gitInit: true,
   install: true,
@@ -112,7 +115,7 @@ if (flags.has('--docs')) {
 }
 
 if (flags.has('--update-lockfile')) {
-  const lockfile = `templates/${language}/_pnpm-lock.yaml`;
+  const lockfile = `templates/${language}-${uiFramework}/_pnpm-lock.yaml`;
   fs.mkdirSync(path.join(ROOT, path.dirname(lockfile)), { recursive: true });
   fs.copyFileSync(path.join(destination, 'pnpm-lock.yaml'), path.join(ROOT, lockfile));
   console.log(`\nUpdated ${lockfile}`);

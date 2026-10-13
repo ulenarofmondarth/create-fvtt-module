@@ -2,7 +2,9 @@ import js from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import jsdoc from 'eslint-plugin-jsdoc';
 import prettier from 'eslint-plugin-prettier/recommended';
+{{#if svelte}}
 import svelte from 'eslint-plugin-svelte';
+{{/if}}
 import globals from 'globals';
 {{#if typescript}}
 import ts from 'typescript-eslint';
@@ -31,7 +33,9 @@ export default defineConfig(
 {{#if typescript}}
   ts.configs.strictTypeChecked,
 {{/if}}
+{{#if svelte}}
   svelte.configs.recommended,
+{{/if}}
 {{#if typescript}}
   jsdoc.configs['flat/recommended-typescript-error'],
 {{else}}
@@ -44,7 +48,9 @@ export default defineConfig(
       parserOptions: {
         project: ['./tsconfig.test.json', './tsconfig.node.json'],
         tsconfigRootDir: import.meta.dirname,
+{{#if svelte}}
         extraFileExtensions: ['.svelte'],
+{{/if}}
       },
     },
 
@@ -77,10 +83,12 @@ export default defineConfig(
 {{#if typescript}}
     languageOptions: { globals: { ...globals.browser, ...globals.jquery } },
   },
+{{#if svelte}}
   {
     files: ['**/*.svelte', '**/*.svelte.ts'],
     languageOptions: { parserOptions: { parser: ts.parser } },
   },
+{{/if}}
   {
     // Assertions on mocked methods (`expect(obj.method)`) are safe; the rule cannot tell them from real unbound calls.
     files: ['tests/**'],

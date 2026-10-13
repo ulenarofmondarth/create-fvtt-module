@@ -38,6 +38,7 @@ jobs:
       - run: pnpm exec prettier --check "**/*.{json,css,scss,md,yml,yaml}"
 
 {{#if typescript}}
+{{#if svelte}}
   svelte-check:
     name: Svelte check
     runs-on: ubuntu-latest
@@ -49,6 +50,7 @@ jobs:
         if: $\{{ hashFiles('src/**/*.svelte') != '' }}
         run: pnpm run svelte-check
 
+{{/if}}
 {{/if}}
   test:
     name: Unit tests

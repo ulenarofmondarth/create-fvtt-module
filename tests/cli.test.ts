@@ -105,6 +105,42 @@ describe('the command line', () => {
     );
   });
 
+  test('sets the project up for Svelte unless told otherwise', async () => {
+    const destination = path.join(work, 'default-ui-framework');
+
+    await main([destination, ...REQUIRED, '--author-name', 'A. Scribe', '--yes', '--no-git-init', '--no-install']);
+
+    expect(fs.readFileSync(path.join(destination, 'package.json'), 'utf8')).toContain('"svelte"');
+  });
+
+  test('leaves Svelte out when asked for no UI framework', async () => {
+    const destination = path.join(work, 'no-ui-framework');
+
+    await main([
+      destination,
+      ...REQUIRED,
+      '--author-name',
+      'A. Scribe',
+      '--ui-framework',
+      'none',
+      '--yes',
+      '--no-git-init',
+      '--no-install',
+    ]);
+
+    expect(fs.readFileSync(path.join(destination, 'package.json'), 'utf8')).not.toContain('svelte');
+  });
+
+  test('rejects a UI framework it does not know, naming the ones it does', async () => {
+    await expect(main([...REQUIRED, '--ui-framework', 'react', '--yes'])).rejects.toThrow(
+      'Invalid --ui-framework "react": Choose one of: svelte, none',
+    );
+  });
+
+  test('lists the UI frameworks in the usage text', () => {
+    expect(usage()).toMatch(/--ui-framework\s+.*\(svelte or none\)/);
+  });
+
   test('lists the languages in the usage text', () => {
     expect(usage()).toMatch(/--language\s+.*\(typescript or javascript\)/);
   });

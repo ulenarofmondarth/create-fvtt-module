@@ -1,8 +1,12 @@
+{{#if svelte}}
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+{{/if}}
 import fs from 'node:fs';
 import path from 'node:path';
 
+{{#if svelte}}
 import { sveltePreprocess } from 'svelte-preprocess';
+{{/if}}
 
 import autoprefixer from 'autoprefixer';
 {{#if typescript}}
@@ -77,9 +81,11 @@ const { hostname: HOSTNAME, ports: PORTS } = loadMountConfig();
 
 const s_PACKAGE_ID = `modules/${moduleJSON.id}`;
 
+{{#if svelte}}
 // A short additional string to add to Svelte CSS hash values to make yours unique. This reduces the amount of
 // duplicated framework CSS overlap between many Svelte packages enabled on Foundry VTT at the same time.
 const s_SVELTE_HASH_ID = {{{ts svelteHashId}}};
+{{/if}}
 
 const s_COMPRESS = false as boolean; // Set to true to compress the module bundle.
 const s_SOURCEMAPS = true; // Generate sourcemaps for the bundle (recommended).
@@ -110,6 +116,7 @@ function copyLang(): Plugin {
 // `localhost` in the browser's address bar would fail. Keep the browser's `Host` header intact instead.
 const foundryProxy = { target: `http://localhost:${PORTS.base}`, changeOrigin: false };
 
+{{#if svelte}}
 export default defineConfig(({ mode }) => {
   // Provides a custom hash adding the string defined in `s_SVELTE_HASH_ID` to scoped Svelte styles;
   // This is reasonable to do as the framework styles in TRL compiled across `n` different packages will
@@ -123,6 +130,9 @@ export default defineConfig(({ mode }) => {
         }
       : {};
 
+{{else}}
+export default defineConfig(() => {
+{{/if}}
   return {
     root: 'src/', // Source location / esbuild root.
     base: `/${s_PACKAGE_ID}/dist`, // Base module path that 30001 / served dev directory.
@@ -135,7 +145,11 @@ export default defineConfig(({ mode }) => {
       unstubGlobals: true,
       coverage: {
         provider: 'v8',
+{{#if svelte}}
         include: ['index.{{{ext}}}', 'module/**/*.{{{ext}}}', 'component/**/*.svelte'],
+{{else}}
+        include: ['index.{{{ext}}}', 'module/**/*.{{{ext}}}'],
+{{/if}}
         reportsDirectory: '../coverage',
         reporter: ['text', 'html', 'lcov'],
         // Ratchet these upward as coverage improves; never lower them to make a change pass.
@@ -217,7 +231,11 @@ export default defineConfig(({ mode }) => {
       },
     },
 
+{{#if svelte}}
     // Necessary when using the dev server for top-level await usage inside TRL.
+{{else}}
+    // Necessary when using the dev server for top-level await usage.
+{{/if}}
     optimizeDeps: {
       esbuildOptions: {
         target: 'es2022',
@@ -241,10 +259,12 @@ export default defineConfig(({ mode }) => {
         compilerOptions: { noEmitOnError: false },
       }),
 {{/if}}
+{{#if svelte}}
       svelte({
         compilerOptions,
         preprocess: sveltePreprocess(),
       }),
+{{/if}}
     ],
   };
 });

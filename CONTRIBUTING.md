@@ -17,8 +17,9 @@ The README describes [how the generator works](README.md#how-the-generator-works
 pnpm typecheck
 pnpm run format:check
 pnpm test
-pnpm run test:smoke                # slow, uses the network; run it when the templates or the packaging change
-pnpm run test:smoke --javascript   # the same for a JavaScript project; run it when the templates change
+pnpm run test:smoke                     # slow, uses the network; run it when the templates or the packaging change
+pnpm run test:smoke --javascript        # the same for a JavaScript project; run it when the templates change
+pnpm run test:smoke --no-ui-framework   # and for a project without Svelte, with and without --javascript
 ```
 
 Keep pull requests small and focused, with tests for what they change. A bug fix starts with a test that fails
