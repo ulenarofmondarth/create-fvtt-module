@@ -1,3 +1,9 @@
+## [0.3.0](https://github.com/ulenarofmondarth/create-fvtt-module/compare/v0.2.0...v0.3.0) (2026-10-13)
+
+### Features
+
+* **templates:** add badges to the generated README ([0a7311d](https://github.com/ulenarofmondarth/create-fvtt-module/commit/0a7311d3b01e49a3af8d910a30235e73d1b17476))
+
 ## [0.2.0](https://github.com/ulenarofmondarth/create-fvtt-module/compare/v0.1.0...v0.2.0) (2026-10-13)
 
 ### Features
