@@ -1,5 +1,12 @@
 # create-fvtt-module
 
+[![CI](https://github.com/ulenarofmondarth/create-fvtt-module/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ulenarofmondarth/create-fvtt-module/actions/workflows/ci.yml)
+[![Release](https://github.com/ulenarofmondarth/create-fvtt-module/actions/workflows/release.yml/badge.svg)](https://github.com/ulenarofmondarth/create-fvtt-module/actions/workflows/release.yml)
+[![npm version](https://img.shields.io/npm/v/@mondarth/create-fvtt-module)](https://www.npmjs.com/package/@mondarth/create-fvtt-module)
+[![Node.js version](https://img.shields.io/node/v/@mondarth/create-fvtt-module)](package.json)
+[![Foundry VTT version](https://img.shields.io/badge/Foundry%20VTT-v14%2B-ff6400)](https://foundryvtt.com)
+[![Licence](https://img.shields.io/npm/l/@mondarth/create-fvtt-module)](LICENSE)
+
 Creates a complete, working project for a Foundry VTT module (version 14 and later) from a handful of answers.
 
 ```sh
