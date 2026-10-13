@@ -33,8 +33,17 @@ jobs:
       - run: pnpm build
 
   smoke:
-    name: Pack, generate a project and run its checks
+    name: Pack, generate a ${{ matrix.language }} project and run its checks
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: TypeScript
+            options: --docs
+          # The documentation tooling is the same in both; building it once is enough.
+          - language: JavaScript
+            options: --javascript
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/setup@v2
@@ -43,4 +52,4 @@ jobs:
           node-version: 24.x
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run test:smoke --docs
+      - run: pnpm run test:smoke ${{ matrix.options }}

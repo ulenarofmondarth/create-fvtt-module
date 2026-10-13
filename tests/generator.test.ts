@@ -6,18 +6,29 @@ import path from 'node:path';
 import * as prettier from 'prettier';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 
-import type { Answers } from '../generator/answers.ts';
+import type { Answers, Language } from '../generator/answers.ts';
 import { generate as generateProject } from '../generator/index.ts';
 import { listFiles, targetPath } from '../generator/scaffold.ts';
 import { ANSWERS } from './answers.test.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const TEMPLATES = path.join(ROOT, 'templates/module');
+const TEMPLATES = path.join(ROOT, 'templates');
 
 /** Where the generator lives; generated projects name it as their provenance. */
 const GENERATOR_URL = 'https://github.com/ulenarofmondarth/create-fvtt-module';
 
 let work: string;
+
+/**
+ * @param language - The language of a generated project
+ * @returns The files such a project is made of, from the shared templates and those of its language
+ */
+function expectedFiles(language: Language): string[] {
+  const files = ['module', language].flatMap(tree =>
+    listFiles(path.join(TEMPLATES, tree)).map(source => targetPath(source, language)),
+  );
+  return [...new Set(files)].sort();
+}
 
 /**
  * Run the generator the way a host does once the questions are answered.
@@ -38,6 +49,28 @@ async function generate(name: string, overrides: Partial<Answers> = {}) {
   };
 }
 
+/**
+ * @param destination - A generated project
+ * @returns The files in it that its own Prettier configuration would reformat
+ */
+async function unformattedFiles(destination: string): Promise<string[]> {
+  const ignorePath = path.join(destination, '.prettierignore');
+  const unformatted: string[] = [];
+
+  for (const file of listFiles(destination)) {
+    const filePath = path.join(destination, file);
+    const info = await prettier.getFileInfo(filePath, { ignorePath });
+    if (info.ignored || !info.inferredParser) continue;
+
+    const options = await prettier.resolveConfig(filePath);
+    if (!(await prettier.check(fs.readFileSync(filePath, 'utf8'), { ...options, filepath: filePath }))) {
+      unformatted.push(file);
+    }
+  }
+
+  return unformatted;
+}
+
 beforeAll(() => {
   work = fs.mkdtempSync(path.join(os.tmpdir(), 'create-fvtt-module-test-'));
 });
@@ -49,7 +82,7 @@ afterAll(() => {
 describe('the module generator', () => {
   test('writes one file per template, without the template extension', async () => {
     const { destination, result } = await generate('files');
-    const expected = listFiles(TEMPLATES).map(targetPath).sort();
+    const expected = expectedFiles('typescript');
 
     expect(expected).not.toContainEqual(expect.stringMatching(/\.hbs$/));
     expect(listFiles(destination)).toEqual(expected);
@@ -65,7 +98,9 @@ describe('the module generator', () => {
   });
 
   test('keeps out of the templates the names package managers leave out of a package', () => {
-    const dropped = listFiles(TEMPLATES).filter(file => ['.gitignore', '.npmrc', 'pnpm-lock.yaml'].includes(file));
+    const dropped = listFiles(TEMPLATES).filter(file =>
+      ['.gitignore', '.npmrc', 'pnpm-lock.yaml'].includes(path.basename(file)),
+    );
 
     expect(dropped).toEqual([]);
   });
@@ -170,21 +205,7 @@ describe('the module generator', () => {
       moduleId: 'a-very-long-module-identifier-that-moves-line-breaks',
       moduleTitle: 'A Very Long Module Title That Moves The Line Breaks Prettier Would Choose',
     });
-    const ignorePath = path.join(destination, '.prettierignore');
-    const unformatted: string[] = [];
-
-    for (const file of listFiles(destination)) {
-      const filePath = path.join(destination, file);
-      const info = await prettier.getFileInfo(filePath, { ignorePath });
-      if (info.ignored || !info.inferredParser) continue;
-
-      const options = await prettier.resolveConfig(filePath);
-      if (!(await prettier.check(fs.readFileSync(filePath, 'utf8'), { ...options, filepath: filePath }))) {
-        unformatted.push(file);
-      }
-    }
-
-    expect(unformatted).toEqual([]);
+    expect(await unformattedFiles(destination)).toEqual([]);
   });
 
   test('keeps the git hooks executable', async () => {
@@ -213,5 +234,81 @@ describe('the module generator', () => {
 
     const branch = execFileSync('git', ['symbolic-ref', '--short', 'HEAD'], { cwd: destination, encoding: 'utf8' });
     expect(branch.trim()).toBe('main');
+  });
+});
+
+describe('a JavaScript project', () => {
+  /** Anything that names TypeScript, its tooling, or a file that would be TypeScript. */
+  const TYPESCRIPT = /typescript|tsconfig|fvtt-types|typecheck|svelte-check|\btsc\b|\.ts\b/i;
+
+  test('has the same files as a TypeScript one, in JavaScript, less the TypeScript configuration', async () => {
+    const { destination, result } = await generate('js-files', { language: 'javascript' });
+    const expected = expectedFiles('javascript');
+    const written = listFiles(destination);
+
+    expect(written).toEqual(expected);
+    expect([...result.files].sort()).toEqual(expected);
+    expect(written.filter(file => /\.ts$|tsconfig/.test(file))).toEqual([]);
+    expect(written).toEqual(expect.arrayContaining(['src/index.js', 'vite.config.js', 'scripts/release/package.js']));
+    // Every source file of the TypeScript project is there, under its JavaScript name.
+    expect(written).toEqual(
+      expectedFiles('typescript')
+        .filter(file => !/\.d\.ts$|tsconfig/.test(file))
+        .map(file => file.replace(/\.ts$/, '.js')),
+    );
+  });
+
+  test('is JavaScript that Node can parse', async () => {
+    const { destination } = await generate('js-syntax', { language: 'javascript' });
+    const scripts = listFiles(destination).filter(file => /\.m?js$/.test(file));
+
+    expect(scripts.length).toBeGreaterThan(10);
+    for (const script of scripts) {
+      expect(
+        () => execFileSync('node', ['--check', script], { cwd: destination, stdio: 'pipe' }),
+        script,
+      ).not.toThrow();
+    }
+  });
+
+  test('depends on neither TypeScript nor the Foundry types', async () => {
+    const { json, read } = await generate('js-dependencies', { language: 'javascript' });
+    const manifest = json('package.json') as { scripts: Record<string, string>; devDependencies: object };
+
+    expect(
+      Object.keys(manifest.devDependencies).filter(name => TYPESCRIPT.test(name) || /^@types\//.test(name)),
+    ).toEqual([]);
+    expect(manifest.devDependencies).not.toHaveProperty('unplugin-dts');
+    expect(manifest).not.toHaveProperty('types');
+    expect(manifest.scripts).not.toHaveProperty('typecheck');
+    expect(manifest.scripts['test']).toBe('vitest --run');
+    expect(read('pnpm-workspace.yaml')).not.toContain('foundry-vtt-types');
+  });
+
+  test('says nothing of TypeScript, in its documentation or anywhere else', async () => {
+    const { destination, read } = await generate('js-clean', { language: 'javascript' });
+
+    const mentions = listFiles(destination).filter(file => file !== 'pnpm-lock.yaml' && TYPESCRIPT.test(read(file)));
+
+    expect(mentions).toEqual([]);
+  });
+
+  test('names its JavaScript files wherever it refers to them', async () => {
+    const { read, json } = await generate('js-names', { language: 'javascript' });
+
+    expect(json('package.json')).toMatchObject({
+      scripts: { 'e2e:packages': 'node scripts/e2e/install-packages.js' },
+    });
+    expect(read('release.config.js')).toContain('node scripts/release/package.js ${nextRelease.version}');
+    expect(read('vite.config.js')).toContain("entry: './index.js'");
+    expect(read('CONTRIBUTING.md')).toContain('`scripts/release/package.js` stamps the version');
+    expect(read('docs/developers/setup.md')).toContain('`DEFAULTS` at the top of `vite.config.js`');
+    expect(read('.github/workflows/ci.yml')).not.toMatch(/^ {2}(typecheck|svelte-check):/m);
+  });
+
+  test('passes its own Prettier check', async () => {
+    const { destination } = await generate('js-formatted', { language: 'javascript' });
+
+    expect(await unformattedFiles(destination)).toEqual([]);
   });
 });

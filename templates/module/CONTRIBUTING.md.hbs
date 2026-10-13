@@ -6,24 +6,35 @@
 pnpm install   # also installs the git hooks (husky)
 ```
 
-The pnpm version is pinned by `packageManager` in `package.json`. The module source is TypeScript only.
+The pnpm version is pinned by `packageManager` in `package.json`. The module source is {{#if typescript}}TypeScript only{{else}}JavaScript{{/if}}.
 
 ## Checks
 
 | Command                  | What it does                                                           |
 | ------------------------ | ---------------------------------------------------------------------- |
+{{#if typescript}}
 | `pnpm typecheck`         | Type-checks the module, the tooling scripts and the unit tests         |
+{{/if}}
 | `pnpm run eslint`        | Lints the whole repository (Prettier formatting is reported by ESLint) |
 | `pnpm test`              | Runs the unit tests                                                    |
 | `pnpm run test:coverage` | Runs the unit tests and enforces the coverage thresholds               |
+{{#if typescript}}
 | `pnpm build`             | Builds the bundle and type declarations into `dist/`                   |
+{{else}}
+| `pnpm build`             | Builds the bundle into `dist/`                                         |
+{{/if}}
 
 Every bug fix needs a regression test: write the failing test first, then the fix.
 
 ## Git hooks
 
+{{#if typescript}}
 - **pre-commit** runs `lint-staged` on the staged files: `eslint --fix`, the unit tests related to those files, a
   project-wide `pnpm typecheck` when TypeScript is staged, and `prettier --write` for JSON, CSS, Markdown and YAML.
+{{else}}
+- **pre-commit** runs `lint-staged` on the staged files: `eslint --fix`, the unit tests related to those files, and
+  `prettier --write` for JSON, CSS, Markdown and YAML.
+{{/if}}
 - **prepare-commit-msg** opens the Commitizen prompt for a plain `git commit`.
 - **commit-msg** validates the message with commitlint and rejects the commit if it fails.
 
@@ -50,7 +61,11 @@ past a failing check. Afterwards, before pushing:
 2. Run the checks the pre-commit hook would have run:
 
    ```sh
+{{#if typescript}}
    pnpm typecheck && pnpm run eslint && pnpm test
+{{else}}
+   pnpm run eslint && pnpm test
+{{/if}}
    ```
 
 3. Fix anything they report and stage the fixes.
@@ -81,7 +96,7 @@ Releases are fully automated; never bump a version or create a tag by hand. The 
    changed one instead, and warns that the commits before it do not count towards the first release. GitHub will not
    let the token put a tag on a commit with older workflow files. To count from the first commit all the same, push the
    tag yourself before the first release: `git tag v0.0.0 <first commit> && git push origin v0.0.0`.
-3. `scripts/release/package.ts` stamps the version into `module.json` and `docs/conf.py`, builds from a clean `dist/`
+3. `scripts/release/package.{{{ext}}}` stamps the version into `module.json` and `docs/conf.py`, builds from a clean `dist/`
    and creates `releases/module-v<version>.zip`.
 4. `CHANGELOG.md`, `module.json` and `docs/conf.py` are committed back to `main` as `chore(release): <version>`, the
    commit is tagged, and a GitHub release is published with the zip and `module.json` attached.
@@ -90,7 +105,7 @@ Releases are fully automated; never bump a version or create a tag by hand. The 
 Foundry installs and updates the module from the stable manifest URL
 `{{{repoUrl}}}/releases/latest/download/module.json`.
 
-To try the packaging step locally, run `node scripts/release/package.ts <version>` and then discard the changes it makes
+To try the packaging step locally, run `node scripts/release/package.{{{ext}}} <version>` and then discard the changes it makes
 to `module.json` and `docs/conf.py`.
 
 ## End-to-end tests
@@ -114,7 +129,7 @@ The first test run accepts the licence agreement, creates and launches a world, 
 player user. Delete `tests/e2e/.data` to start again from nothing.
 
 Every test fails on an unexpected `console.error` or uncaught exception in the browser. Accepted messages go in the
-allowlist in `tests/e2e/support/fixtures.ts`, each with a comment explaining it.
+allowlist in `tests/e2e/support/fixtures.{{{ext}}}`, each with a comment explaining it.
 
 ## AI Disclosure
 

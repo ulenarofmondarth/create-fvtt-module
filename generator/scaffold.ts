@@ -4,7 +4,8 @@ import path from 'node:path';
 
 import * as prettier from 'prettier';
 
-import type { TemplateData } from './answers.ts';
+import type { Language, TemplateData } from './answers.ts';
+import { stripTypes } from './javascript.ts';
 
 /** Templates carry this extension; every other file is copied byte for byte. */
 const TEMPLATE_EXTENSION = '.hbs';
@@ -22,13 +23,18 @@ const STORED_AS: Readonly<Record<string, string>> = {
 
 const WRITTEN_AS = new Map(Object.entries(STORED_AS).map(([written, stored]) => [stored, written]));
 
+/** A TypeScript source file, as opposed to a declaration file, which has no JavaScript counterpart. */
+const TYPESCRIPT_SOURCE = /(?<!\.d)\.ts$/;
+
 /**
- * @param source - A file in the template tree, relative to its root
+ * @param source - A file in a template tree, relative to its root
+ * @param language - The language of the generated project
  * @returns The path the file is written to, relative to the generated project
  */
-export function targetPath(source: string): string {
+export function targetPath(source: string, language: Language): string {
   const rendered = source.endsWith(TEMPLATE_EXTENSION) ? source.slice(0, -TEMPLATE_EXTENSION.length) : source;
-  return WRITTEN_AS.get(rendered) ?? rendered;
+  const written = WRITTEN_AS.get(rendered) ?? rendered;
+  return language === 'javascript' ? written.replace(TYPESCRIPT_SOURCE, '.js') : written;
 }
 
 /** Renders a Handlebars template with the generator's helpers. */
@@ -63,36 +69,52 @@ export function assertUsableDestination(destination: string, force: boolean): vo
 /**
  * Write the project: render the `.hbs` templates, copy everything else unchanged, keeping file modes.
  *
- * Every template is rendered before anything is written, so a template error leaves no half-written project behind.
- * @param templates - Root of the template tree
+ * The templates are TypeScript. For a JavaScript project the types are stripped from each TypeScript source file,
+ * which is then written as `.js`; formatting the project afterwards tidies the gaps that leaves.
+ *
+ * Every file is rendered before anything is written, so a template error leaves no half-written project behind.
+ * @param templates - Roots of the template trees; a file in a later tree replaces the same file from an earlier one
  * @param data - What the templates are rendered with
  * @param render - The Handlebars renderer
  * @returns The files written, relative to the destination
  */
-export function writeProject(templates: string, data: TemplateData, render: Render): string[] {
-  const files = listFiles(templates).map(source => {
-    const sourcePath = path.join(templates, source);
-    const target = targetPath(source);
-    if (!source.endsWith(TEMPLATE_EXTENSION)) return { sourcePath, target, content: undefined };
+export function writeProject(templates: string[], data: TemplateData, render: Render): string[] {
+  const files = new Map<string, { sourcePath: string; content: string | undefined }>();
 
-    try {
-      const content = render(fs.readFileSync(sourcePath, 'utf8'), data);
-      return { sourcePath, target, content };
-    } catch (error) {
-      throw new Error(`Could not render ${source}: ${error instanceof Error ? error.message : String(error)}`);
+  for (const root of templates) {
+    // A tree with no files in it is not there at all in a published package.
+    if (!fs.existsSync(root)) continue;
+
+    for (const source of listFiles(root)) {
+      const sourcePath = path.join(root, source);
+      const target = targetPath(source, data.language);
+      const isTemplate = source.endsWith(TEMPLATE_EXTENSION);
+      const isConverted = target !== targetPath(source, 'typescript');
+      if (!isTemplate && !isConverted) {
+        files.set(target, { sourcePath, content: undefined });
+        continue;
+      }
+
+      try {
+        const text = fs.readFileSync(sourcePath, 'utf8');
+        const rendered = isTemplate ? render(text, data) : text;
+        files.set(target, { sourcePath, content: isConverted ? stripTypes(rendered) : rendered });
+      } catch (error) {
+        throw new Error(`Could not render ${source}: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
-  });
-
-  for (const { sourcePath, target, content } of files) {
-    const targetPath = path.join(data.destination, target);
-
-    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-    if (content === undefined) fs.copyFileSync(sourcePath, targetPath);
-    else fs.writeFileSync(targetPath, content);
-    fs.chmodSync(targetPath, fs.statSync(sourcePath).mode);
   }
 
-  return files.map(file => file.target);
+  for (const [target, { sourcePath, content }] of files) {
+    const writtenPath = path.join(data.destination, target);
+
+    fs.mkdirSync(path.dirname(writtenPath), { recursive: true });
+    if (content === undefined) fs.copyFileSync(sourcePath, writtenPath);
+    else fs.writeFileSync(writtenPath, content);
+    fs.chmodSync(writtenPath, fs.statSync(sourcePath).mode);
+  }
+
+  return [...files.keys()].sort();
 }
 
 /**

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { confirm, input } from '@inquirer/prompts';
+import { confirm, input, select } from '@inquirer/prompts';
 
 import type { Answers } from './answers.ts';
 import { generate } from './index.ts';
@@ -30,7 +30,8 @@ export function optionName(name: string): string {
 export function usage(): string {
   const options = questions.map(question => {
     const flag = question.type === 'confirm' ? `--[no-]${optionName(question.name)}` : `--${optionName(question.name)}`;
-    return `  ${flag.padEnd(WIDTH)} ${question.message.replace(/[:?]$/, '')}`;
+    const values = question.type === 'select' ? ` (${question.choices.map(choice => choice.value).join(' or ')})` : '';
+    return `  ${flag.padEnd(WIDTH)} ${question.message.replace(/[:?]$/, '')}${values}`;
   });
 
   return [
@@ -97,6 +98,17 @@ async function answer(
   if (question.type === 'confirm') {
     if (typeof given === 'boolean') return given;
     return ask ? confirm({ message: question.message, default: question.default }) : question.default;
+  }
+
+  if (question.type === 'select') {
+    if (typeof given === 'string') {
+      if (question.choices.some(choice => choice.value === given)) return given;
+      const values = question.choices.map(choice => choice.value).join(', ');
+      throw new Error(`Invalid ${option} "${given}": Choose one of: ${values}`);
+    }
+    return ask
+      ? select({ message: question.message, choices: question.choices, default: question.default })
+      : question.default;
   }
 
   const validate = question.validate ?? (() => true);

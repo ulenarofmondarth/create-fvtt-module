@@ -1,6 +1,11 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
+/** The languages a module can be generated in; the first is the default. */
+export const LANGUAGES = ['typescript', 'javascript'] as const;
+
+export type Language = (typeof LANGUAGES)[number];
+
 /** What the user is asked for. Everything else in the generated project is derived from these. */
 export interface Answers {
   /** Foundry package ID, also the name of the built bundle. */
@@ -26,6 +31,8 @@ export interface Answers {
   systemUrl: string;
   /** Whether `module.json` declares the system as a requirement. */
   restrictToSystem: boolean;
+  /** What the module source, its tests and its scripts are written in. */
+  language: Language;
   /** Directory to generate into, absolute or relative to the working directory. */
   destination: string;
   gitInit: boolean;
@@ -43,6 +50,10 @@ export interface TemplateData extends Answers {
   repoUrl: string;
   docsUrl: string;
   year: string;
+  /** Whether {@link Answers.language} is TypeScript, for the templates to branch on. */
+  typescript: boolean;
+  /** Extension of the project's source files: `ts` or `js`. */
+  ext: 'ts' | 'js';
 }
 
 /** The result of checking an answer: `true`, or the reason it is not acceptable. */
@@ -55,6 +66,7 @@ const KNOWN_SYSTEM_URLS: Record<string, string> = {
 
 export const DEFAULT_FOUNDRY_VERSION = '14.368.0';
 export const DEFAULT_SYSTEM_ID = 'dnd5e';
+export const DEFAULT_LANGUAGE: Language = 'typescript';
 
 /** The oldest Foundry VTT generation the templates target. */
 const MINIMUM_FOUNDRY_GENERATION = 14;
@@ -112,6 +124,14 @@ export function validateOptionalUrl(value: string): Validation {
  */
 export function validateArchiveUrl(value: string): Validation {
   return URL.canParse(value) && value.endsWith('.zip') ? true : 'Give the full URL of the system release .zip';
+}
+
+/**
+ * @param value - The candidate language
+ * @returns `true`, or the reason the language is not acceptable
+ */
+export function validateLanguage(value: string): Validation {
+  return (LANGUAGES as readonly string[]).includes(value) ? true : `Choose one of: ${LANGUAGES.join(', ')}`;
 }
 
 /**
@@ -181,6 +201,7 @@ export function resolveAnswers(answers: Answers, now = new Date()): TemplateData
     ['foundryVersion', validateFoundryVersion(answers.foundryVersion)],
     ['systemId', validateModuleId(answers.systemId)],
     ['systemUrl', validateArchiveUrl(answers.systemUrl)],
+    ['language', validateLanguage(answers.language)],
     ['destination', required('The destination directory')(answers.destination)],
   ];
   for (const [name, result] of checks) {
@@ -196,5 +217,7 @@ export function resolveAnswers(answers: Answers, now = new Date()): TemplateData
     repoUrl: `https://github.com/${answers.githubOwner}/${answers.repoName}`,
     docsUrl: `https://${answers.githubOwner.toLowerCase()}.github.io/${answers.repoName}/`,
     year: String(now.getFullYear()),
+    typescript: answers.language === 'typescript',
+    ext: answers.language === 'typescript' ? 'ts' : 'js',
   };
 }

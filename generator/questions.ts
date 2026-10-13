@@ -1,6 +1,7 @@
-import type { Answers, Validation } from './answers.ts';
+import type { Answers, Language, Validation } from './answers.ts';
 import {
   DEFAULT_FOUNDRY_VERSION,
+  DEFAULT_LANGUAGE,
   DEFAULT_SYSTEM_ID,
   defaultSystemUrl,
   gitConfig,
@@ -34,7 +35,16 @@ export interface ConfirmQuestion {
   default: boolean;
 }
 
-export type Question = InputQuestion | ConfirmQuestion;
+/** A question answered by picking one of a fixed set of values. */
+export interface SelectQuestion {
+  type: 'select';
+  name: AnswersOfType<Language>;
+  message: string;
+  choices: readonly { value: Language; name: string }[];
+  default: Language;
+}
+
+export type Question = InputQuestion | ConfirmQuestion | SelectQuestion;
 
 /**
  * Everything the generator needs to know, in the order to ask for it.
@@ -124,6 +134,16 @@ export const questions: readonly Question[] = [
     name: 'restrictToSystem',
     message: 'Does the module require that game system (declared in module.json)?',
     default: false,
+  },
+  {
+    type: 'select',
+    name: 'language',
+    message: 'Language to write the module in:',
+    choices: [
+      { value: 'typescript', name: 'TypeScript' },
+      { value: 'javascript', name: 'JavaScript' },
+    ],
+    default: DEFAULT_LANGUAGE,
   },
   {
     type: 'input',

@@ -1,5 +1,10 @@
 /**
+{{#if typescript}}
  * The module's package ID. Kept as a literal (rather than read from `module.json`) so that settings, flag and
  * module-lookup keys stay precisely typed; a unit test asserts it matches the manifest.
+{{else}}
+ * The module's package ID. Kept as a literal (rather than read from `module.json`) so that the bundle does not carry the
+ * manifest; a unit test asserts it matches the manifest.
+{{/if}}
  */
 export const MODULE_ID = {{{ts moduleId}}};

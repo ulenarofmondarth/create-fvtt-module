@@ -7,9 +7,9 @@
  * Going through the packed tarball is the point: it is the only check that sees what users get, including whatever a
  * package manager leaves out of the package.
  *
- * Usage: `node scripts/smoke.ts [--docs] [--keep] [--update-lockfile]`
+ * Usage: `node scripts/smoke.ts [--javascript] [--docs] [--keep] [--update-lockfile]`
  *
- * `--docs` also builds the Sphinx documentation (needs Docker); `--keep` leaves the generated project in place;
+ * `--javascript` generates a JavaScript project rather than a TypeScript one; `--docs` also builds the Sphinx documentation (needs Docker); `--keep` leaves the generated project in place;
  * `--update-lockfile` copies the lockfile of the project that just passed back into the templates.
  * This installs the generated project's dependencies from the network, so it is slow and not part of `pnpm test`.
  */
@@ -19,10 +19,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import type { Answers } from '../generator/answers.ts';
+import type { Answers, Language } from '../generator/answers.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const flags = new Set(process.argv.slice(2));
+const language: Language = flags.has('--javascript') ? 'javascript' : 'typescript';
 
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'create-fvtt-module-smoke-'));
 const destination = path.join(work, 'smoke-module');
@@ -42,6 +43,7 @@ const answers: Answers = {
   systemId: 'dnd5e',
   systemUrl: 'https://github.com/foundryvtt/dnd5e/releases/download/release-5.3.3/dnd5e-release-5.3.3.zip',
   restrictToSystem: true,
+  language,
   destination,
   gitInit: true,
   install: true,
@@ -86,13 +88,13 @@ const options = Object.entries(answers).flatMap(([name, value]) => {
 runIn(consumer, path.join('node_modules', '.bin', 'create-fvtt-module'), destination, '--yes', ...options);
 
 // The same gates as the generated .github/workflows/ci.yml.
-run('pnpm', 'typecheck');
+if (language === 'typescript') run('pnpm', 'typecheck');
 run('pnpm', 'exec', 'eslint', '.', '--max-warnings', '0');
 run('pnpm', 'exec', 'prettier', '--check', '**/*.{json,css,scss,md,yml,yaml}');
 run('pnpm', 'run', 'test:coverage');
 run('pnpm', 'build');
 // What semantic-release runs to stamp the version and zip the Foundry package.
-run('node', 'scripts/release/package.ts', '1.2.3');
+run('node', `scripts/release/package.${language === 'typescript' ? 'ts' : 'js'}`, '1.2.3');
 run('pnpm', 'exec', 'prettier', '--check', 'module.json');
 run('unzip', '-l', 'releases/module-v1.2.3.zip');
 if (flags.has('--docs')) {
@@ -110,8 +112,10 @@ if (flags.has('--docs')) {
 }
 
 if (flags.has('--update-lockfile')) {
-  fs.copyFileSync(path.join(destination, 'pnpm-lock.yaml'), path.join(ROOT, 'templates/module/_pnpm-lock.yaml'));
-  console.log('\nUpdated templates/module/_pnpm-lock.yaml');
+  const lockfile = `templates/${language}/_pnpm-lock.yaml`;
+  fs.mkdirSync(path.join(ROOT, path.dirname(lockfile)), { recursive: true });
+  fs.copyFileSync(path.join(destination, 'pnpm-lock.yaml'), path.join(ROOT, lockfile));
+  console.log(`\nUpdated ${lockfile}`);
 }
 
 if (flags.has('--keep')) {

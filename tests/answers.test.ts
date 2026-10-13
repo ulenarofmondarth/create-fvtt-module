@@ -10,6 +10,7 @@ import {
   titleFromId,
   validateArchiveUrl,
   validateFoundryVersion,
+  validateLanguage,
   validateModuleId,
   validateOptionalUrl,
 } from '../generator/answers.ts';
@@ -28,6 +29,7 @@ export const ANSWERS: Answers = {
   systemId: 'dnd5e',
   systemUrl: 'https://example.com/dnd5e.zip',
   restrictToSystem: false,
+  language: 'typescript',
   destination: 'out',
   gitInit: false,
   install: false,
@@ -121,5 +123,28 @@ describe('resolveAnswers', () => {
     ['destination', ''],
   ])('rejects an invalid %s', (name, value) => {
     expect(() => resolveAnswers({ ...ANSWERS, [name]: value })).toThrow(`Invalid ${name}`);
+  });
+});
+
+describe('validateLanguage', () => {
+  test.each(['typescript', 'javascript'])('accepts %s', language => {
+    expect(validateLanguage(language)).toBe(true);
+  });
+
+  test.each(['', 'TypeScript', 'ts', 'coffeescript'])('rejects "%s"', language => {
+    expect(validateLanguage(language)).toMatch(/typescript, javascript/);
+  });
+});
+
+describe('the language', () => {
+  test('decides the extension of the source files', () => {
+    expect(resolveAnswers(ANSWERS)).toMatchObject({ typescript: true, ext: 'ts' });
+    expect(resolveAnswers({ ...ANSWERS, language: 'javascript' })).toMatchObject({ typescript: false, ext: 'js' });
+  });
+
+  test('must be one the generator knows', () => {
+    expect(() => resolveAnswers({ ...ANSWERS, language: 'coffeescript' as Answers['language'] })).toThrow(
+      /Invalid language "coffeescript"/,
+    );
   });
 });

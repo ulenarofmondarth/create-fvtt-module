@@ -8,10 +8,11 @@ pnpm create @mondarth/fvtt-module
 
 The generated project has no module code beyond an entry point that logs on `init`. What it has is the tooling:
 
-- strict TypeScript, bundled by Vite into one ES module, with Svelte 5 ready for UI and the League `fvtt-types`
-- Vitest unit tests with typed Foundry mocks and enforced coverage thresholds
+- strict TypeScript with the League `fvtt-types`, or plain JavaScript if you prefer, bundled by Vite into one ES
+  module, with Svelte 5 ready for UI
+- Vitest unit tests with Foundry mocks and enforced coverage thresholds
 - Playwright end-to-end tests against a real, pinned Foundry VTT server in Docker (Chromium, Firefox, WebKit)
-- ESLint (strict, type-checked), Prettier, `svelte-check`
+- ESLint, Prettier and, in a TypeScript project, type-checked lint rules and `svelte-check`
 - Husky hooks, lint-staged, Commitizen and commitlint enforcing Conventional Commits
 - semantic-release, which stamps `module.json`, zips the Foundry package and publishes the GitHub release
 - GitHub Actions workflows for CI, end-to-end tests, releases and documentation
@@ -20,7 +21,7 @@ The generated project has no module code beyond an entry point that logs on `ini
 
 ## Requirements
 
-- Node.js 24 or later (the generated project's scripts are TypeScript run directly by Node)
+- Node.js 24 or later (a TypeScript project's scripts are TypeScript run directly by Node)
 - pnpm
 - git
 - Docker, for the generated project's documentation, development server and end-to-end tests
@@ -50,9 +51,17 @@ You are asked for:
 | `systemId`         | The game system the end-to-end test world is created with                                       |
 | `systemUrl`        | The release `.zip` of that system, pinned for the tests. Known for `dnd5e`, asked for otherwise |
 | `restrictToSystem` | Whether `module.json` declares that system as required                                          |
+| `language`         | `typescript` (the default) or `javascript`: what the source, tests and scripts are written in   |
 | `destination`      | Where to create the project. Defaults to `./<moduleId>`                                         |
 | `gitInit`          | Whether to run `git init` there                                                                 |
 | `install`          | Whether to run `pnpm install` there                                                             |
+
+### TypeScript or JavaScript
+
+A TypeScript project is the default. Answer `javascript` (`--language javascript`) for the same project without
+TypeScript: the same source, tests and scripts as `.js` files, and no `typescript`, `fvtt-types`, `tsconfig.json`,
+`pnpm typecheck` or `svelte-check`. Its ESLint configuration lists the Foundry globals instead of reading them from
+types, and its documentation and workflows describe the checks it actually has.
 
 The generator refuses to write into a directory that already has content unless it is run with `--force`.
 
@@ -76,7 +85,7 @@ The package is also a library, so a tool can ask the questions its own way and t
 ```ts
 import { generate, questions, type Answers } from "@mondarth/create-fvtt-module";
 
-// `questions` describes every answer: its name, its prompt, its default and its validation.
+// `questions` describes every answer: its name, its prompt, its default, and its validation or its choices.
 const answers: Answers = await askYourOwnWay(questions);
 const { destination, files } = await generate(answers, { onStep: console.log });
 ```
@@ -100,22 +109,28 @@ last commit that changed one instead; the project's `CONTRIBUTING.md` explains w
 
 ## How the generator works
 
-| Path                     | Purpose                                                                            |
-| ------------------------ | ---------------------------------------------------------------------------------- |
-| `generator/index.ts`     | The library entry point: `generate` and the exported types                         |
-| `generator/cli.ts`       | The command line: options, prompts, and the call to `generate`                     |
-| `generator/questions.ts` | The questions, as data                                                             |
-| `generator/answers.ts`   | Validation of the answers and the values derived from them                         |
-| `generator/render.ts`    | Handlebars and its helpers                                                         |
-| `generator/scaffold.ts`  | Writing, formatting, `git init` and `pnpm install`                                 |
-| `templates/module/`      | The project that is generated                                                      |
-| `tests/`                 | Unit tests of the generator                                                        |
-| `scripts/smoke.ts`       | Packs the generator, generates from the package, and runs the project's own checks |
+| Path                      | Purpose                                                                             |
+| ------------------------- | ----------------------------------------------------------------------------------- |
+| `generator/index.ts`      | The library entry point: `generate` and the exported types                          |
+| `generator/cli.ts`        | The command line: options, prompts, and the call to `generate`                      |
+| `generator/questions.ts`  | The questions, as data                                                              |
+| `generator/answers.ts`    | Validation of the answers and the values derived from them                          |
+| `generator/render.ts`     | Handlebars and its helpers                                                          |
+| `generator/scaffold.ts`   | Writing, formatting, `git init` and `pnpm install`                                  |
+| `generator/javascript.ts` | Stripping the types from a TypeScript template for a JavaScript project             |
+| `templates/module/`       | The project that is generated, whatever its language                                |
+| `templates/typescript/`   | What only a TypeScript project gets: `tsconfig*.json`, type augmentations, lockfile |
+| `templates/javascript/`   | What only a JavaScript project gets: its lockfile                                   |
+| `tests/`                  | Unit tests of the generator                                                         |
+| `scripts/smoke.ts`        | Packs the generator, generates from the package, and runs the project's own checks  |
 
-Files in `templates/module/` ending in `.hbs` are rendered with Handlebars and lose the extension. Every other file is
-copied byte for byte, so GitHub Actions workflows and MyST pages can use `{{ }}` freely. After rendering, the generator
-formats the project with the project's own Prettier configuration, so the output passes its format check whatever the
-length of the names.
+A project is `templates/module/` with the tree of its language laid over it. Files ending in `.hbs` are rendered with
+Handlebars and lose the extension. Every other file is copied byte for byte, so MyST pages and any workflow that is not
+a template can use `{{ }}` freely. After rendering, the generator formats the project with the project's own Prettier
+configuration, so the output passes its format check whatever the length of the names.
+
+The templates are written once, in TypeScript. For a JavaScript project the generator strips the types from every
+`.ts` file (not `.d.ts`) and writes it as `.js`, so the two languages cannot drift apart.
 
 When editing templates:
 
@@ -123,34 +138,44 @@ When editing templates:
 - Inside string literals use the helpers: `{{{json value}}}` for JSON, `{{{ts value}}}` for TypeScript and
   `{{{py value}}}` for Python. They add the quotes and escape the value. `{{{concat a 'b' c}}}` joins values.
 - In a `.hbs` file, write a literal `{{` as `\{{`.
+- Keep TypeScript templates to syntax that can be erased: no enums, namespaces or parameter properties. A comment
+  inside an `interface` or `type` goes with it, so say there only what a JavaScript reader can do without.
+- Wrap whatever only one language has in `{{#if typescript}}…{{else}}…{{/if}}`, and write the extension of a source file
+  as `{{{ext}}}` wherever one is named (`vite.config.{{{ext}}}`). That includes prose: a JavaScript project must not
+  mention TypeScript, and a test checks that it does not.
 - Do not add a file named `.gitignore`, `.npmrc` or `pnpm-lock.yaml`: package managers leave those out of a published
   package. Store it under another name and add the pair to `STORED_AS` in `generator/scaffold.ts`, as is done for
   `_gitignore` and `_pnpm-lock.yaml`.
 
-### The template lockfile
+### The template lockfiles
 
-`templates/module/_pnpm-lock.yaml` is copied into every new project as `pnpm-lock.yaml`, so each one starts with the dependency versions
-the template was last tested with. This matters most for `fvtt-types`, which tracks the `main` branch of its
-repository: `pnpm-workspace.yaml` has to name the exact commit whose build script is allowed to run, and the lockfile
-keeps new projects on that commit.
+The two languages have different dependencies, so each has its own lockfile: `templates/typescript/_pnpm-lock.yaml`
+and `templates/javascript/_pnpm-lock.yaml`. The one for the project's language is copied into it as `pnpm-lock.yaml`,
+so each new project starts with the dependency versions the template was last tested with. This matters most for
+`fvtt-types`, which tracks the `main` branch of its repository: `pnpm-workspace.yaml` has to name the exact commit
+whose build script is allowed to run, and the lockfile keeps new TypeScript projects on that commit.
 
 To move the template to current versions:
 
-1. Delete `templates/module/_pnpm-lock.yaml`.
-2. Run `pnpm run test:smoke --update-lockfile`.
-3. If the install stops with `ERR_PNPM_IGNORED_BUILDS` for `foundry-vtt-types`, copy the package key from the error
-   message over the old one in `templates/module/pnpm-workspace.yaml`, and run the command again.
+1. Delete both lockfiles.
+2. Run `pnpm run test:smoke --update-lockfile` and `pnpm run test:smoke --javascript --update-lockfile`.
+3. If the TypeScript install stops with `ERR_PNPM_IGNORED_BUILDS` for `foundry-vtt-types`, copy the package key from
+   the error message over the old one in `templates/module/pnpm-workspace.yaml.hbs`, and run the command again.
+
+After changing the dependencies in `templates/module/package.json.hbs`, update both lockfiles the same way: the
+generated CI installs with `--frozen-lockfile`.
 
 ## Working on the generator
 
 ```sh
 pnpm install
-pnpm generate           # runs the command line from source
+pnpm generate                      # runs the command line from source
 pnpm typecheck
-pnpm test               # generates into temporary directories and inspects the result
-pnpm build              # compiles generator/ to dist/, which is what the package ships
-pnpm run test:smoke     # packs the package, installs it, generates a project and runs its own checks; slow, uses the network
-pnpm run test:smoke --docs   # the same, plus the Docker build of the documentation
+pnpm test                          # generates into temporary directories and inspects the result
+pnpm build                         # compiles generator/ to dist/, which is what the package ships
+pnpm run test:smoke                # packs the package, installs it, generates a project and runs its own checks; slow, uses the network
+pnpm run test:smoke --javascript   # the same, for a JavaScript project
+pnpm run test:smoke --docs         # either of them, plus the Docker build of the documentation
 ```
 
 The smoke test does not run the generated end-to-end tests: they need a Foundry VTT licence.

@@ -11,13 +11,16 @@ import {
   writeProject,
 } from './scaffold.ts';
 
-export type { Answers, TemplateData, Validation } from './answers.ts';
-export { DEFAULT_FOUNDRY_VERSION, DEFAULT_SYSTEM_ID, resolveAnswers } from './answers.ts';
-export type { ConfirmQuestion, InputQuestion, Question } from './questions.ts';
+export type { Answers, Language, TemplateData, Validation } from './answers.ts';
+export { DEFAULT_FOUNDRY_VERSION, DEFAULT_LANGUAGE, DEFAULT_SYSTEM_ID, LANGUAGES, resolveAnswers } from './answers.ts';
+export type { ConfirmQuestion, InputQuestion, Question, SelectQuestion } from './questions.ts';
 export { questions } from './questions.ts';
 
-/** The project that is generated, shipped alongside the compiled generator. */
-const TEMPLATES = path.join(import.meta.dirname, '../templates/module');
+/**
+ * The project that is generated, shipped alongside the compiled generator: `module` holds what every project gets, and
+ * a directory named after each language holds what only projects in that language get.
+ */
+const TEMPLATES = path.join(import.meta.dirname, '../templates');
 
 export interface GenerateOptions {
   /** Write into the destination even when it already has content. */
@@ -48,7 +51,7 @@ export async function generate(answers: Answers, options: GenerateOptions = {}):
   const data = resolveAnswers(answers);
   assertUsableDestination(data.destination, options.force === true);
 
-  const files = writeProject(TEMPLATES, data, render);
+  const files = writeProject([path.join(TEMPLATES, 'module'), path.join(TEMPLATES, data.language)], data, render);
   await formatProject(data.destination, files);
   report(`wrote ${files.length} files in ${data.destination}`);
 

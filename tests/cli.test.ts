@@ -71,6 +71,44 @@ describe('the command line', () => {
     expect(fs.existsSync(path.join(destination, 'node_modules'))).toBe(false);
   });
 
+  test('generates TypeScript unless told otherwise', async () => {
+    const destination = path.join(work, 'default-language');
+
+    await main([destination, ...REQUIRED, '--author-name', 'A. Scribe', '--yes', '--no-git-init', '--no-install']);
+
+    expect(fs.existsSync(path.join(destination, 'src/index.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(destination, 'tsconfig.json'))).toBe(true);
+  });
+
+  test('generates JavaScript when asked to', async () => {
+    const destination = path.join(work, 'javascript');
+
+    await main([
+      destination,
+      ...REQUIRED,
+      '--author-name',
+      'A. Scribe',
+      '--language',
+      'javascript',
+      '--yes',
+      '--no-git-init',
+      '--no-install',
+    ]);
+
+    expect(fs.existsSync(path.join(destination, 'src/index.js'))).toBe(true);
+    expect(fs.existsSync(path.join(destination, 'src/index.ts'))).toBe(false);
+  });
+
+  test('rejects a language it does not know, naming the ones it does', async () => {
+    await expect(main([...REQUIRED, '--language', 'coffeescript', '--yes'])).rejects.toThrow(
+      'Invalid --language "coffeescript": Choose one of: typescript, javascript',
+    );
+  });
+
+  test('lists the languages in the usage text', () => {
+    expect(usage()).toMatch(/--language\s+.*\(typescript or javascript\)/);
+  });
+
   test('says which answer is missing when it may not ask', async () => {
     const destination = path.join(work, 'missing');
 

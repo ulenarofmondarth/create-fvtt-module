@@ -10,7 +10,11 @@ interface RegisteredHook {
 }
 
 /**
+{{#if typescript}}
  * A small working stand-in for Foundry's `Hooks`, typed against the real signatures so drift is caught at compile time.
+{{else}}
+ * A small working stand-in for Foundry's `Hooks`.
+{{/if}}
  * @returns The mock, plus `run` to trigger a hook from a test
  */
 export function createHooksMock() {

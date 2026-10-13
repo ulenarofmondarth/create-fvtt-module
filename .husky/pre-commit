@@ -1,5 +1,5 @@
 #!/bin/env bash
 
-# Name the configuration: left to search, lint-staged would apply the generated project's own configuration in
-# templates/module to the template files, and rewrite them as if they were that project's sources.
+# Name the configuration: left to search, lint-staged applies whichever configuration is nearest each staged file, and
+# one among the templates would have the template files rewritten as if they were a generated project's sources.
 pnpm lint-staged --config .lintstagedrc.mjs

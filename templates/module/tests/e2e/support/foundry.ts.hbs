@@ -4,7 +4,7 @@ import { expect } from '@playwright/test';
 export const MODULE_ID = {{{ts moduleId}}};
 export const MODULE_TITLE = {{{ts moduleTitle}}};
 
-/** The world created by `setup/bootstrap.setup.ts`. */
+/** The world created by `setup/bootstrap.setup.{{{ext}}}`. */
 export const WORLD = {
   id: {{{ts (concat moduleId '-e2e')}}},
   title: {{{ts (concat moduleTitle ' E2E')}}},

@@ -1,6 +1,6 @@
 # Setup
 
-Once the [](prerequisites.md) are installed setup is simple enough.
+Once the [](prerequisites.md) are installed, setup is simple enough.
 
 ```sh
 git clone {{{repoUrl}}}.git
@@ -40,7 +40,7 @@ project mounted as the `{{{moduleId}}}` module.
    and passes everything else on to Foundry VTT.
 
    The host name the development server answers to (besides `localhost`) and the two ports default to the values in
-   `DEFAULTS` at the top of `vite.config.ts`. To change them on one machine without editing that file, create
+   `DEFAULTS` at the top of `vite.config.{{{ext}}}`. To change them on one machine without editing that file, create
    `.pdt/mount.json`, which is ignored by {program}`git`. Every key is optional:
 
    ```json
@@ -48,7 +48,7 @@ project mounted as the `{{{moduleId}}}` module.
    ```
 
    Set the `PDT_MOUNT_CONFIG` environment variable to read the settings from a different file; a relative path is
-   resolved from the directory containing `vite.config.ts`.
+   resolved from the directory containing `vite.config.{{{ext}}}`.
 
 ## The module manifest
 

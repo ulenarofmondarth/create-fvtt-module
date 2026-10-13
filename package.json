@@ -1,7 +1,7 @@
 {
   "name": "@mondarth/create-fvtt-module",
   "version": "0.1.0",
-  "description": "Scaffolds a Foundry VTT v14+ module project (TypeScript, Vite, Svelte, Vitest, Playwright, semantic-release, Sphinx).",
+  "description": "Scaffolds a Foundry VTT v14+ module project (TypeScript or JavaScript, Vite, Svelte, Vitest, Playwright, semantic-release, Sphinx).",
   "keywords": [
     "foundryvtt",
     "foundry-vtt",
@@ -63,6 +63,7 @@
   },
   "dependencies": {
     "@inquirer/prompts": "^8.7.3",
+    "amaro": "^1.2.1",
     "handlebars": "^4.7.10",
     "prettier": "^3.9.6"
   },
