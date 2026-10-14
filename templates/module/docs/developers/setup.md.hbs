@@ -95,4 +95,5 @@ The workflows in `.github/workflows` need:
 : Repository secrets used by the end-to-end tests to download and license a Foundry VTT server.
 
 GitHub Pages
-: Set to deploy from the `gh-pages` branch, which the documentation workflow maintains.
+: Under *Settings → Pages*, set the source to *GitHub Actions*. The documentation workflow builds the site and
+  deploys it directly; there is no `gh-pages` branch.

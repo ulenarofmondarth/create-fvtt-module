@@ -7,16 +7,18 @@ on:
     paths:
       - "docs/**"
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+# Let a deployment in progress finish rather than leave the site half published; the newest queued run deploys next.
 concurrency:
-  group: generate-docs
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       # Always build the tip of main: when called from the release workflow this includes the release commit, which
       # carries the version stamped into docs/conf.py.
@@ -25,19 +27,24 @@ jobs:
           ref: main
 
       - name: Build Documentation
-        run: |
-          docker compose run --rm --user "$(id -u):$(id -g)" docs make html
-          cd ./docs/_build/html
-          zip -r ${{ github.workspace }}/documentation-${{ github.ref_name }}.zip .
+        run: docker compose run --rm --user "$(id -u):$(id -g)" docs make html
 
-      - name: Preserve Documentation
-        uses: actions/upload-artifact@v4
+      - name: Upload Documentation
+        uses: actions/upload-pages-artifact@v5
         with:
-          name: documentation-${{ github.ref_name}}
-          path: ${{ github.workspace }}/documentation-${{ github.ref_name }}.zip
+          path: ./docs/_build/html
 
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy Documentation
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/_build/html
+        id: deployment
+        uses: actions/deploy-pages@v5
