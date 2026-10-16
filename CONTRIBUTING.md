@@ -5,18 +5,31 @@
 You need Node.js 24 or later, pnpm, git and, for the full smoke test, Docker.
 
 ```sh
+git switch dev
 pnpm install     # also installs the git hooks
 ```
 
 The README describes [how the generator works](README.md#how-the-generator-works) and
 [the commands for working on it](README.md#working-on-the-generator).
 
+## Workflow
+
+1. Create a short-lived branch from **`dev`**, named for the change: `feat/...`, `fix/...`, `docs/...`.
+2. Write a failing test first, then the change. A bug fix starts with a test that reproduces the bug.
+3. Run the checks (below).
+4. Commit using Conventional Commits.
+5. Open a pull request against **`dev`**. The **CI passed** check must be green before it is merged.
+
+`main` only receives merges from `dev`, with a merge commit (never a squash, so semantic-release sees every commit);
+each merge may produce a release. Releases are fully automated: never edit the version number or `CHANGELOG.md` by
+hand.
+
 ## Before opening a pull request
 
 ```sh
 pnpm typecheck
 pnpm run format:check
-pnpm test
+pnpm test:coverage                      # the tests, with the coverage thresholds
 pnpm run test:smoke                     # slow, uses the network; run it when the templates or the packaging change
 pnpm run test:smoke --javascript        # the same for a JavaScript project; run it when the templates change
 pnpm run test:smoke --lit               # and for a project set up for Lit, with and without --javascript
@@ -24,7 +37,8 @@ pnpm run test:smoke --no-ui-framework   # and for one without a UI framework, li
 ```
 
 Keep pull requests small and focused, with tests for what they change. A bug fix starts with a test that fails
-because of the bug.
+because of the bug. The coverage thresholds in `vitest.config.ts` sit just below the measured level: raise them as
+tests are added, never lower them. CI reports coverage to Codecov.
 
 ## Commits
 
