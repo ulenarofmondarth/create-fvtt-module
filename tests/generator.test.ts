@@ -261,6 +261,25 @@ describe('the module generator', () => {
     }
   });
 
+  // setsid detaches the hook from any controlling terminal, as an IDE, a script or an agent commits.
+  test.skipIf(process.platform !== 'linux')(
+    'lets commits made without a terminal through prepare-commit-msg',
+    async () => {
+      const { destination } = await generate('headless-commit');
+      const message = path.join(destination, '.git-commit-message');
+      fs.writeFileSync(message, 'fix(core): mend a thing\n');
+
+      // Husky runs hooks with `sh -e`; `git commit -m` passes the message file and "message" as the source.
+      expect(() =>
+        execFileSync('setsid', ['--wait', 'sh', '-e', '.husky/prepare-commit-msg', message, 'message'], {
+          cwd: destination,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        }),
+      ).not.toThrow();
+      expect(fs.readFileSync(message, 'utf8')).toBe('fix(core): mend a thing\n');
+    },
+  );
+
   test('creates the directories Docker mounts or writes into, so that they belong to the user rather than root', async () => {
     const { destination, read, json } = await generate('data-directory');
     // The development server's and the end-to-end server's data directories, down to the point where each compose
