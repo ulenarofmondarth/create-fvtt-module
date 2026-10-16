@@ -1,3 +1,10 @@
+## [0.4.1](https://github.com/ulenarofmondarth/create-fvtt-module/compare/v0.4.0...v0.4.1) (2026-10-16)
+
+### Bug Fixes
+
+* **templates:** create Foundry mount directories before Docker does ([871e1b4](https://github.com/ulenarofmondarth/create-fvtt-module/commit/871e1b462db5030a1a0230d70f09175dacd2280d))
+* **templates:** run Foundry container as the owner of its data ([cc30d4c](https://github.com/ulenarofmondarth/create-fvtt-module/commit/cc30d4c9bf5f220f4d9e86b992ae96fca3053b8c))
+
 ## [0.4.0](https://github.com/ulenarofmondarth/create-fvtt-module/compare/v0.3.1...v0.4.0) (2026-10-16)
 
 ### Features
