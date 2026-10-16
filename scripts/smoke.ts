@@ -91,7 +91,7 @@ const options = Object.entries(answers).flatMap(([name, value]) => {
 });
 runIn(consumer, path.join('node_modules', '.bin', 'create-fvtt-module'), destination, '--yes', ...options);
 
-// The same gates as the generated .github/workflows/ci.yml.
+// The same gates as the generated .github/workflows/dev.yml.
 if (language === 'typescript') run('pnpm', 'typecheck');
 run('pnpm', 'exec', 'eslint', '.', '--max-warnings', '0');
 run('pnpm', 'exec', 'prettier', '--check', '**/*.{json,css,scss,md,yml,yaml}');

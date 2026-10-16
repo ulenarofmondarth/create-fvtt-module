@@ -12,7 +12,8 @@ Replacing `pnpm` with `npm` is simple enough. You will need to modify the follow
   `pnpm`.
 
 `.github/workflows`
-: Check these as they use `pnpm` and a github cache action for `pnpm`.
+: Check these as they use `pnpm`. The shared set-up steps in `.github/actions/setup` install `pnpm` and cache its
+  store.
 
 (replacing-github)=
 
@@ -22,7 +23,8 @@ You can use another host for your version control and deployment but you will ne
 
 `.github/workflows`
 : These (obviously) rely on github being used[^f1]. These build, package and deploy your module and its associated
-  documentation.
+  documentation. The release App and the branch rulesets ([](github-setup.md)) are GitHub features too; another host
+  needs its own way of letting releases push to protected branches.
 
 `module.json`
 : The elements in this file that change with each release are automatically maintained by the `.github/workflows`.
@@ -38,7 +40,7 @@ The `.github/workflows` assume this documentation system is used when building a
 
 If you replace the documentation system you will need to review and update:
 
-`.github/workflows/ci.yml`
+`.github/workflows/dev.yml`
 : The `docs` job builds the documentation for every pull request.
 
 `package.json`
