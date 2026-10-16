@@ -10,4 +10,8 @@ if [ -n "$GIT_SEQUENCE_EDITOR" ]; then
   exit 0
 fi
 
-exec < /dev/tty && pnpm exec cz --hook || true
+# The Commitizen prompt needs a terminal. Without one (an IDE, a script, CI), skip it rather than fail the commit:
+# husky runs hooks with `sh -e`, which exits on a failed redirection. commitlint still checks the message in commit-msg.
+if (exec < /dev/tty) 2> /dev/null; then
+  exec < /dev/tty && pnpm exec cz --hook || true
+fi
