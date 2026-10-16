@@ -17,6 +17,16 @@
   "bugs": {
     "url": "https://github.com/ulenarofmondarth/create-fvtt-module/issues"
   },
+  "funding": [
+    {
+      "type": "patreon",
+      "url": "https://patreon.com/Mondarth"
+    },
+    {
+      "type": "ko-fi",
+      "url": "https://ko-fi.com/ulenarofmondarth"
+    }
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ulenarofmondarth/create-fvtt-module.git"
