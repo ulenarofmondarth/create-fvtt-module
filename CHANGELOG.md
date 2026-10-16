@@ -1,3 +1,9 @@
+## [0.3.1](https://github.com/ulenarofmondarth/create-fvtt-module/compare/v0.3.0...v0.3.1) (2026-10-16)
+
+### Bug Fixes
+
+* **release:** keep the conventional commits preset on v9 ([20b93de](https://github.com/ulenarofmondarth/create-fvtt-module/commit/20b93de43b2d28b28c332e21676cb7bd36856e53))
+
 ## [0.3.0](https://github.com/ulenarofmondarth/create-fvtt-module/compare/v0.2.0...v0.3.0) (2026-10-13)
 
 ### Features
