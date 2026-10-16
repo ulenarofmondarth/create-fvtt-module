@@ -1,0 +1,34 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build(deps)
+      prefix-development: build(deps-dev)
+    ignore:
+      # Version 10 needs conventional-changelog-writer 9, but semantic-release's notes generator still uses writer 8
+      # (tests/config/release-notes.test.ts). Lift this once it upgrades.
+      - dependency-name: conventional-changelog-conventionalcommits
+        update-types: ["version-update:semver-major"]
+      # The types must match the oldest Node.js we support (engines), or newer APIs type-check and then fail at run
+      # time. Moved by hand with the baseline.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+    groups:
+      vitest:
+        patterns: ["vitest", "@vitest/*"]
+      commit-tooling:
+        patterns: ["@commitlint/*", "commitlint-*", "commitizen", "cz-*", "husky", "lint-staged"]
+      release:
+        patterns: ["semantic-release", "@semantic-release/*", "conventional-changelog-*"]
+
+  - package-ecosystem: github-actions
+    directories: ["/", "/.github/actions/*"]
+    target-branch: dev
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci(workflows)

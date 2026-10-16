@@ -1,0 +1,37 @@
+name: Bug report
+description: The generator, or a project it generates, does not work as it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include the answers or command-line options you generated the project with.
+      placeholder: |
+        1. pnpm create @mondarth/fvtt-module …
+        2. …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The version of @mondarth/create-fvtt-module you ran.
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Operating system, Node.js and pnpm versions
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      render: text

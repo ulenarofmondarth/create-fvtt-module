@@ -1,8 +1,8 @@
 /**
  * semantic-release configuration.
  *
- * Versions follow SemVer from the Conventional Commits history: `fix` → patch, `feat` → minor, and a `!` or
- * `BREAKING CHANGE:` footer → major.
+ * Releases are cut from `main` only; day-to-day work lands on `dev`. Versions follow SemVer from the Conventional
+ * Commits history: `fix` → patch, `feat` → minor, and a `!` or `BREAKING CHANGE:` footer → major.
  */
 export default {
   branches: ['main'],
@@ -22,5 +22,7 @@ export default {
       },
     ],
     '@semantic-release/github',
+    // Hands the version to the later jobs of the release workflow.
+    ['@semantic-release/exec', { successCmd: 'echo "version=${nextRelease.version}" >> "$GITHUB_OUTPUT"' }],
   ],
 };
