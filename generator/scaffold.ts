@@ -25,14 +25,21 @@ const STORED_AS: Readonly<Record<string, string>> = {
  * Directories the project needs from the start although nothing is in them yet.
  *
  * Docker creates as root whatever is missing of a bind mount: its source, and the directories leading to a mount
- * point inside another mount. The Foundry VTT server in the container cannot then write there. Made here, the
- * development server's data directory, down to where the project is mounted in it as a module, belongs to whoever
- * generated the project. Keep in step with the `serve:vtt` script, which does the same for a fresh clone.
+ * point inside another mount. The Foundry VTT server in the container cannot then write there; left without the
+ * cache it downloads its server release into, it hangs. Made here, the data directories of the development and the
+ * end-to-end servers, down to where the project is mounted in each as a module, and their caches belong to whoever
+ * generated the project. Keep in step with the `serve:vtt` and `e2e:server` scripts, which do the same for a fresh
+ * clone.
  * @param data - What the templates are rendered with
  * @returns The directories, relative to the project
  */
 function emptyDirectories(data: TemplateData): string[] {
-  return [`.foundryvtt/data/Data/modules/${data.moduleId}`];
+  return [
+    `.foundryvtt/data/Data/modules/${data.moduleId}`,
+    '.foundryvtt/data/container_cache',
+    `tests/e2e/.data/Data/modules/${data.moduleId}`,
+    'tests/e2e/.data/container_cache',
+  ];
 }
 
 const WRITTEN_AS = new Map(Object.entries(STORED_AS).map(([written, stored]) => [stored, written]));

@@ -238,24 +238,43 @@ describe('the module generator', () => {
     }
   });
 
-  test('creates the development server data directory, for Docker to mount as the user rather than create as root', async () => {
+  test('creates the directories Docker mounts or writes into, so that they belong to the user rather than root', async () => {
     const { destination, read, json } = await generate('data-directory');
-    // Down to the point where the compose file mounts the project as a module.
-    const mountPoint = path.join(destination, '.foundryvtt/data/Data/modules/arcane-ledger');
+    // The development server's and the end-to-end server's data directories: down to the point where each compose
+    // file mounts the project as a module, and the cache Foundry VTT downloads its server release into.
+    const directories = [
+      '.foundryvtt/data/Data/modules/arcane-ledger',
+      '.foundryvtt/data/container_cache',
+      'tests/e2e/.data/Data/modules/arcane-ledger',
+      'tests/e2e/.data/container_cache',
+    ];
 
     expect(read('.foundryvtt/docker-compose.yml')).toContain('source: ./data');
     expect(read('.foundryvtt/docker-compose.yml')).toContain('target: /data/Data/modules/arcane-ledger');
-    expect(fs.statSync(mountPoint).isDirectory()).toBe(true);
-    expect(fs.readdirSync(mountPoint)).toEqual([]);
-    for (let directory = mountPoint; directory !== path.join(destination, '.foundryvtt');) {
-      expect(fs.statSync(directory).uid, directory).toBe(process.getuid?.());
-      directory = path.dirname(directory);
+    expect(read('tests/e2e/compose.yaml')).toContain('./.data:/data');
+    expect(read('tests/e2e/compose.yaml')).toContain('CONTAINER_CACHE=/data/container_cache');
+    for (const relative of directories) {
+      const directory = path.join(destination, relative);
+      expect(fs.statSync(directory).isDirectory(), relative).toBe(true);
+      expect(fs.readdirSync(directory), relative).toEqual([]);
+      for (let parent = directory; parent !== destination; parent = path.dirname(parent)) {
+        expect(fs.statSync(parent).uid, parent).toBe(process.getuid?.());
+      }
     }
     expect(read('.gitignore')).toContain('.foundryvtt/data/');
-    // The directory is not committed, so a clone has to make it before Docker does.
+    expect(read('.gitignore')).toContain('tests/e2e/.data/');
+    // The directories are not committed, so a clone, and CI, has to make them before Docker does.
     expect(json('package.json')).toMatchObject({
-      scripts: { 'serve:vtt': 'cd .foundryvtt && mkdir -p data/Data/modules/arcane-ledger && docker compose up -d' },
+      scripts: {
+        'serve:vtt':
+          'cd .foundryvtt && mkdir -p data/Data/modules/arcane-ledger data/container_cache && docker compose up -d',
+        'e2e:server':
+          'mkdir -p tests/e2e/.data/Data/modules/arcane-ledger tests/e2e/.data/container_cache && ' +
+          'docker compose -f tests/e2e/compose.yaml up --detach --wait',
+      },
     });
+    expect(read('.github/workflows/e2e.yml')).toContain('pnpm run e2e:server --wait-timeout 300');
+    expect(read('.github/workflows/e2e.yml')).not.toContain('docker compose -f tests/e2e/compose.yaml up');
   });
 
   test('develops on dev and releases from main, as the release App', async () => {

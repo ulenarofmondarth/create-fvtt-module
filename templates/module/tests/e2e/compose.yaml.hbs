@@ -1,7 +1,8 @@
 # Throwaway Foundry VTT server for the end-to-end tests.
 #
 # Requires FOUNDRY_USERNAME, FOUNDRY_PASSWORD, FOUNDRY_LICENSE_KEY and FOUNDRY_ADMIN_KEY in the environment.
-# Prepare tests/e2e/.data first with `node scripts/e2e/install-packages.{{{ext}}}`.
+# Prepare tests/e2e/.data first with `pnpm run e2e:packages`, and start the server with `pnpm run e2e:server`, which
+# makes the directories mounted here before Docker would make them as root.
 services:
   foundry:
     # Keep in step with VERSION in .foundryvtt/.env.

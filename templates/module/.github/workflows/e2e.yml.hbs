@@ -74,10 +74,12 @@ jobs:
       - name: Install the pinned system and module
         run: pnpm run e2e:packages
 
+      # The script makes the directories Docker mounts first, as the runner's user: created by Docker, they would belong
+      # to root, and Foundry VTT, unable to write its server download to /data/container_cache, would hang.
       - name: Start Foundry VTT
         run: |
           export FOUNDRY_UID="$(id -u)" FOUNDRY_GID="$(id -g)"
-          docker compose -f tests/e2e/compose.yaml up --detach --wait --wait-timeout 300
+          pnpm run e2e:server --wait-timeout 300
 
       - name: Run Playwright
         run: pnpm run test:e2e --project=$\{{ matrix.browser }}
