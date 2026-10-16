@@ -1,3 +1,12 @@
+## [0.4.2](https://github.com/ulenarofmondarth/create-fvtt-module/compare/v0.4.1...v0.4.2) (2026-10-16)
+
+### Bug Fixes
+
+* **templates:** give e2e browsers a window Foundry accepts ([e3ff515](https://github.com/ulenarofmondarth/create-fvtt-module/commit/e3ff51542aa1ec5ab5a9f1b19e6aa45187a3b87e))
+* **templates:** let commits without a terminal pass prepare-commit-msg ([42daaa8](https://github.com/ulenarofmondarth/create-fvtt-module/commit/42daaa8082b6803e2d07160a4ca26e56f6e158c5))
+* **templates:** run e2e Firefox headed on a virtual display ([dce8659](https://github.com/ulenarofmondarth/create-fvtt-module/commit/dce86595a93ed88082bf41b0f1be53a294664fd4))
+* **templates:** use Foundry v14 world creation and join pages in e2e ([f41e610](https://github.com/ulenarofmondarth/create-fvtt-module/commit/f41e6102bcded2193a644228898411fe9ebfb070))
+
 ## [0.4.1](https://github.com/ulenarofmondarth/create-fvtt-module/compare/v0.4.0...v0.4.1) (2026-10-16)
 
 ### Bug Fixes
