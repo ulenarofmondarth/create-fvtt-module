@@ -226,6 +226,10 @@ describe('the module generator', () => {
     // The join form takes a typed user name rather than offering a select.
     expect(support).toContain('input[name="username"]');
     expect(support).not.toContain('select[name="userid"]');
+    // Foundry logs a console error below 1024x768, and the desktop device presets are 1280x720.
+    const config = read('tests/e2e/playwright.config.ts');
+    expect(config).toContain('const VIEWPORT = { width: 1280, height: 800 };');
+    expect(config.match(/viewport: VIEWPORT/g)).toHaveLength(4);
   });
 
   test('writes special characters as valid JSON, TypeScript and Python literals', async () => {
