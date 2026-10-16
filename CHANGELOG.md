@@ -1,3 +1,9 @@
+## [0.4.0](https://github.com/ulenarofmondarth/create-fvtt-module/compare/v0.3.1...v0.4.0) (2026-10-16)
+
+### Features
+
+* **templates:** generate the dev to main pull request workflow ([0ebef93](https://github.com/ulenarofmondarth/create-fvtt-module/commit/0ebef93620aa42c5523327a0082fafe26d5e0e87))
+
 ## [0.3.1](https://github.com/ulenarofmondarth/create-fvtt-module/compare/v0.3.0...v0.3.1) (2026-10-16)
 
 ### Bug Fixes
