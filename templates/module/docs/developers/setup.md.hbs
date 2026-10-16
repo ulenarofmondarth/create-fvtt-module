@@ -5,11 +5,12 @@ Once the [](prerequisites.md) are installed, setup is simple enough.
 ```sh
 git clone {{{repoUrl}}}.git
 cd {{{repoName}}}
+git switch dev
 pnpm install
 ```
 
-`pnpm install` also installs the git hooks. The checks, commit message rules and release process are described in
-`CONTRIBUTING.md`.
+`pnpm install` also installs the git hooks. Work happens on branches from `dev`; [](workflow.md) describes how changes
+reach a release, and `CONTRIBUTING.md` the checks and commit message rules.
 
 ## Running a development Foundry VTT
 
@@ -84,16 +85,5 @@ the release workflow will maintain them for you. (Otherwise, see [](#replacing-g
 
 ## Repository settings
 
-The workflows in `.github/workflows` need:
-
-`PERSONAL_ACCESS_TOKEN`
-: A repository secret holding a token that may push to `main`; the release workflow commits the changelog and the
-  stamped `module.json` with it. A fine-grained token needs read and write access to the repository's contents,
-  issues and pull requests. It does not need access to workflows.
-
-`FOUNDRY_USERNAME`, `FOUNDRY_PASSWORD`, `FOUNDRY_LICENSE_KEY` and `FOUNDRY_ADMIN_KEY`
-: Repository secrets used by the end-to-end tests to download and license a Foundry VTT server.
-
-GitHub Pages
-: Under *Settings → Pages*, set the source to *GitHub Actions*. The documentation workflow builds the site and
-  deploys it directly; there is no `gh-pages` branch.
+The workflows in `.github/workflows` need a release GitHub App, a few secrets, GitHub Pages, and rulesets protecting
+`dev` and `main`. [](github-setup.md) walks through setting them up.

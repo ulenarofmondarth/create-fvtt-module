@@ -1,0 +1,135 @@
+# GitHub setup
+
+What the repository at <{{{repoUrl}}}> needs for the workflows described in [](workflow.md). Work through the steps in
+order: the first push to `main` runs the release workflow, which needs the release App to be in place.
+
+## 1. Create the repository
+
+Create an empty repository named `{{{repoName}}}` under `{{{githubOwner}}}` on GitHub, without a README, licence or
+`.gitignore`: the project already has them.
+
+## 2. Create the release App
+
+The release workflow pushes to protected branches: semantic-release pushes the release commit and tag to `main`, and the
+*Bring dev up to date* job fast-forwards `dev`. It does so as a GitHub App, the only actor the rulesets (step 6) let
+past. Each workflow run gets a token that expires within an hour, so there is no long-lived token to rotate.
+
+1. Open *Settings → Developer settings → GitHub Apps → New GitHub App*, in your account's settings or the
+   organisation's.
+   - **GitHub App name**: anything unique, for example `{{{githubOwner}}}-{{{repoName}}}-release` (at most 34
+     characters).
+   - **Homepage URL**: `{{{repoUrl}}}`.
+   - **Webhook**: untick *Active*.
+   - **Repository permissions**: *Contents*, *Issues* and *Pull requests*, each *Read and write*. *Metadata: Read-only*
+     is added automatically.
+   - **Where can this GitHub App be installed?**: *Only on this account*.
+2. On the App's page, note the **App ID** and the **Client ID** (it starts with `Iv`), then *Generate a private key*. A
+   `.pem` file downloads.
+3. *Install App* → your account or organisation → *Only select repositories* → `{{{repoName}}}`.
+4. In the repository, under *Settings → Secrets and variables → Actions*:
+   - add a **variable** `RELEASE_APP_CLIENT_ID` holding the Client ID;
+   - add a **secret** `RELEASE_APP_PRIVATE_KEY` holding the whole content of the `.pem` file.
+
+   Then delete the downloaded file.
+
+Release commits are authored by `<app-name>[bot]`. If the private key leaks, revoke it on the App's page and generate a
+new one.
+
+## 3. Add the other secrets
+
+Under *Settings → Secrets and variables → Actions → Secrets*:
+
+| Secret                  | Used by | Purpose                                                                           |
+| ----------------------- | ------- | --------------------------------------------------------------------------------- |
+| `FOUNDRY_USERNAME`      | E2E     | Your foundryvtt.com user name, to download the pinned Foundry VTT server          |
+| `FOUNDRY_PASSWORD`      | E2E     | Your foundryvtt.com password                                                      |
+| `FOUNDRY_LICENSE_KEY`   | E2E     | A Foundry VTT licence key for the test server                                     |
+| `FOUNDRY_ADMIN_KEY`     | E2E     | Any password; the tests use it to administer the test server                      |
+| `CODECOV_TOKEN`         | Dev CI  | Optional. Uploads coverage to [Codecov](https://about.codecov.io) (step 8)        |
+
+Pull requests from forks cannot read secrets, so the end-to-end tests are skipped for them.
+
+## 4. Enable GitHub Pages and code security
+
+- *Settings → Pages → Build and deployment → Source*: **GitHub Actions**. The documentation is deployed straight from
+  the workflow; there is no `gh-pages` branch.
+- *Settings → Advanced Security* (*Code security* on some accounts):
+  - **Dependency graph**: on. The *Dependency review* workflow fails without it.
+  - **Dependabot alerts** and **Dependabot security updates**: on.
+  - **Code scanning**: leave CodeQL's *default setup* off. The *CodeQL* workflow is the project's own (advanced) setup,
+    and GitHub refuses its results while the default setup is enabled.
+- *Settings → General → Pull Requests*: allow **merge commits**, and tick **Automatically delete head branches**.
+  GitHub never deletes the default branch, so `dev` is safe.
+
+## 5. Push `main`, then create `dev`
+
+Push the project, then create `dev` from `main` and make it the default branch, so that pull requests target it:
+
+```sh
+git remote add origin {{{repoUrl}}}.git
+git push -u origin main
+git switch -c dev
+git push -u origin dev
+```
+
+Then, under *Settings → General → Default branch*, switch the default branch to **`dev`**.
+
+The push to `main` starts the *Release* workflow. Dev CI runs first; then, as long as no commit warrants a release yet
+(a `chore` scaffold commit does not), semantic-release only tags the first commit `v0.0.0` and stops.
+
+## 6. Protect the branches with rulesets
+
+Under *Settings → Rules → Rulesets → New ruleset → New branch ruleset*, create two rulesets, both with *Enforcement
+status: Active*.
+
+| Setting                                | `dev` ruleset                   | `main` ruleset                              |
+| -------------------------------------- | ------------------------------- | ------------------------------------------- |
+| Target branches                        | `dev`                           | `main`                                      |
+| Restrict deletions                     | on                              | on                                          |
+| Block force pushes                     | on                              | on                                          |
+| Require a pull request before merging  | on, 0 approvals                 | on, 0 approvals                             |
+| Allowed merge methods                  | merge, squash, rebase           | **merge** only                              |
+| Require status checks to pass          | **CI passed**                   | **CI passed** and **E2E passed**            |
+| Bypass list                            | the release App, *Always allow* | the release App, *Always allow*             |
+
+- Leave everyone else, administrators included, off the bypass list, so that every human change goes through a pull
+  request.
+- `main` takes merge commits only: squashing the pull request from `dev` would hide its commits from semantic-release,
+  and `main` and `dev` would diverge.
+- Pick the checks from GitHub Actions. A check can only be picked once it has run; until then type its name exactly.
+  **CI passed** runs on every pull request, **E2E passed** on pull requests to `main`.
+- You cannot approve your own pull requests, so with more than 0 required approvals a lone maintainer could merge
+  nothing.
+
+## 7. Check the setup
+
+Open a small pull request against `dev`, for example a documentation fix. The *Dev CI*, *CodeQL* and *Dependency
+review* workflows should run, and it can be merged once **CI passed** is green. Then open a pull request from `dev` to
+`main` and merge it: the *Release* workflow should publish a release if a `feat` or `fix` commit is among them, deploy
+the documentation and fast-forward `dev` to the release commit.
+
+## 8. Codecov (optional)
+
+Sign in at [codecov.io](https://about.codecov.io) with GitHub, add the repository, and store the upload token it
+shows as the `CODECOV_TOKEN` secret. Codecov then comments coverage changes on pull requests. Its checks are
+informational (`codecov.yml`); the coverage thresholds in `vite.config.{{{ext}}}` are what fail CI.
+
+## Troubleshooting
+
+*Get a release token* fails
+: The App is not installed on the repository, or `RELEASE_APP_CLIENT_ID` or `RELEASE_APP_PRIVATE_KEY` is missing or
+  wrong.
+
+The release fails to push to `main`
+: The App is missing from the `main` ruleset's bypass list.
+
+*Bring dev up to date* opens a pull request instead of updating `dev`
+: `dev` gained commits while the release ran, or the App is missing from the `dev` ruleset's bypass list. Merge the
+  pull request from `main` into `dev` with a merge commit.
+
+*Dependency review* fails with "Dependency review is not supported on this repository"
+: Turn on the dependency graph (step 4), then re-run the check.
+
+*Commit messages* fails on a Dependabot pull request
+: Dependabot's `bump …` headers are exempt (`.commitlintrc.mjs`). If the exemption was added after the pull request
+  was opened, comment `@dependabot rebase` on it.

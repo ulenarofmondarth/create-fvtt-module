@@ -1,5 +1,7 @@
 name: E2E
 
+# Runs on pull requests to `main` (the release pull requests from `dev`) and by hand. One Foundry VTT licence runs one
+# server at a time, so the browsers take turns and the suite is too slow to run on every pull request to `dev`.
 on:
   pull_request:
     branches:
@@ -98,6 +100,18 @@ jobs:
             tests/e2e/playwright-report/
             tests/e2e/test-results/
           if-no-files-found: ignore
+
+  # A single check for the `main` ruleset to require. A run skipped for a pull request from a fork counts as passed.
+  e2e-passed:
+    name: E2E passed
+    if: $\{{ always() }}
+    needs: e2e
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check that every browser passed (or was skipped)
+        env:
+          RESULT: $\{{ needs.e2e.result }}
+        run: '[ "$RESULT" = success ] || [ "$RESULT" = skipped ]'
 
   comment:
     name: Comment on the pull request

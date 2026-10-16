@@ -1,9 +1,11 @@
 version: 2
 
+# Every update is raised as a pull request against `dev`, like any other change.
 updates:
   # Documentation toolchain (Sphinx and its extensions).
   - package-ecosystem: pip
     directory: /docs
+    target-branch: dev
     schedule:
       interval: weekly
     commit-message:
@@ -13,6 +15,7 @@ updates:
   # Base image of the documentation container.
   - package-ecosystem: docker
     directory: /docs
+    target-branch: dev
     schedule:
       interval: weekly
     commit-message:
@@ -20,7 +23,10 @@ updates:
       include: scope
 
   - package-ecosystem: github-actions
-    directory: /
+    directories:
+      - /
+      - /.github/actions/*
+    target-branch: dev
     schedule:
       interval: weekly
     commit-message:
@@ -29,8 +35,33 @@ updates:
 
   - package-ecosystem: npm
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly
     commit-message:
       prefix: build
       include: scope
+    ignore:
+      # Version 10 needs conventional-changelog-writer 9, but semantic-release's notes generator still uses writer 8,
+      # so the release notes would fail to render. Lift this once the generator upgrades.
+      - dependency-name: conventional-changelog-conventionalcommits
+        update-types:
+          - version-update:semver-major
+    groups:
+      vitest:
+        patterns:
+          - vitest
+          - '@vitest/*'
+      commit-tooling:
+        patterns:
+          - '@commitlint/*'
+          - commitlint-*
+          - commitizen
+          - cz-*
+          - husky
+          - lint-staged
+      release:
+        patterns:
+          - semantic-release
+          - '@semantic-release/*'
+          - conventional-changelog-*
