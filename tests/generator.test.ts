@@ -230,6 +230,9 @@ describe('the module generator', () => {
     const config = read('tests/e2e/playwright.config.ts');
     expect(config).toContain('const VIEWPORT = { width: 1280, height: 800 };');
     expect(config.match(/viewport: VIEWPORT/g)).toHaveLength(4);
+    // Headless Firefox has no WebGL, which Foundry VTT needs; headed on a virtual display, it renders in software.
+    expect(config).toMatch(/name: 'firefox',[^}]*headless: false/);
+    expect(read('.github/workflows/e2e.yml')).toContain('run: xvfb-run --auto-servernum pnpm run test:e2e');
   });
 
   test('writes special characters as valid JSON, TypeScript and Python literals', async () => {

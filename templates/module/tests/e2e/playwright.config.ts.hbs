@@ -39,7 +39,14 @@ export default defineConfig({
     // Accepts the licence agreement, creates and launches the test world and enables the modules.
     { name: 'setup', testMatch: SETUP, use: { ...devices['Desktop Chrome'], viewport: VIEWPORT } },
     { name: 'chromium', testIgnore: SETUP, dependencies: ['setup'], use: { ...devices['Desktop Chrome'], viewport: VIEWPORT } },
-    { name: 'firefox', testIgnore: SETUP, dependencies: ['setup'], use: { ...devices['Desktop Firefox'], viewport: VIEWPORT } },
+    // Headless Firefox cannot create the WebGL context Foundry VTT needs. Headed, it renders WebGL in software, so it
+    // opens a window; CI gives it a virtual display (xvfb-run in .github/workflows/e2e.yml).
+    {
+      name: 'firefox',
+      testIgnore: SETUP,
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Firefox'], viewport: VIEWPORT, headless: false },
+    },
     { name: 'webkit', testIgnore: SETUP, dependencies: ['setup'], use: { ...devices['Desktop Safari'], viewport: VIEWPORT } },
   ],
 });
