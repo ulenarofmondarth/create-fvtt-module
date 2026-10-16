@@ -159,7 +159,7 @@ describe('the module generator', () => {
     const { read } = await generate('expressions');
     const exemplarStyle = /\$\{\{ [^}]+ \}\}/g;
 
-    for (const workflow of ['ci.yml', 'e2e.yml', 'release.yml', 'build-and-deploy-docs.yml']) {
+    for (const workflow of ['dev.yml', 'e2e.yml', 'release.yml', 'build-and-deploy-docs.yml']) {
       const generated = read(`.github/workflows/${workflow}`);
       expect(generated, workflow).not.toContain('\\{{');
       expect(generated.match(exemplarStyle)?.length, workflow).toBeGreaterThan(0);
@@ -186,7 +186,10 @@ describe('the module generator', () => {
     const repository = 'https://github.com/Scribes-Guild/arcane-ledger';
 
     expect(read('README.md')).toContain(
-      `[![CI](${repository}/actions/workflows/ci.yml/badge.svg?branch=main)](${repository}/actions/workflows/ci.yml)`,
+      `[![Dev CI](${repository}/actions/workflows/dev.yml/badge.svg?branch=dev)](${repository}/actions/workflows/dev.yml)`,
+    );
+    expect(read('README.md')).toContain(
+      '(https://codecov.io/gh/Scribes-Guild/arcane-ledger/branch/dev/graph/badge.svg)',
     );
     expect(read('README.md')).toContain(`(${repository}/actions/workflows/release.yml/badge.svg)`);
     expect(read('README.md')).toContain('https://img.shields.io/github/v/release/Scribes-Guild/arcane-ledger');
@@ -253,6 +256,62 @@ describe('the module generator', () => {
     expect(json('package.json')).toMatchObject({
       scripts: { 'serve:vtt': 'cd .foundryvtt && mkdir -p data/Data/modules/arcane-ledger && docker compose up -d' },
     });
+  });
+
+  test('develops on dev and releases from main, as the release App', async () => {
+    const { read } = await generate('workflow');
+    const dev = read('.github/workflows/dev.yml');
+    const release = read('.github/workflows/release.yml');
+
+    expect(dev).toMatch(/push:\n\s+branches:\n\s+- dev\n/);
+    expect(dev).toMatch(/pull_request:\n\s+branches:\n\s+- dev\n\s+- main\n/);
+    expect(dev).toContain('codecov/codecov-action@');
+    expect(release).toMatch(/push:\n\s+branches:\n\s+- main\n/);
+    expect(release).toContain('uses: ./.github/workflows/dev.yml');
+    expect(release).toContain('client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}');
+    expect(release).toContain('git push origin HEAD:dev');
+    expect(read('release.config.js')).toContain(
+      `successCmd: 'echo "version=\${nextRelease.version}" >> "$GITHUB_OUTPUT"'`,
+    );
+    expect(read('.github/workflows/e2e.yml')).toContain('name: E2E passed');
+    expect(read('.github/dependabot.yml').match(/target-branch: dev/g)).toHaveLength(4);
+    expect(read('.github/dependabot.yml')).toMatch(/dependency-name: conventional-changelog-conventionalcommits/);
+    expect(read('.commitlintrc.mjs')).toContain('ignores: [isDependabot]');
+    expect(read('codecov.yml')).toContain('carryforward: true');
+  });
+
+  test('no longer asks for a personal access token', async () => {
+    const { destination, read } = await generate('no-pat');
+
+    const mentions = listFiles(destination).filter(
+      file => file !== 'pnpm-lock.yaml' && /PERSONAL_ACCESS_TOKEN/.test(read(file)),
+    );
+
+    expect(mentions).toEqual([]);
+  });
+
+  test('keeps the Vitest coverage provider on the same major version as Vitest', async () => {
+    const { json } = await generate('vitest');
+    const { devDependencies } = json('package.json') as { devDependencies: Record<string, string> };
+    const major = (range: string | undefined) => /\d+/.exec(range ?? '')?.[0];
+
+    expect(major(devDependencies.vitest)).toBe('5');
+    expect(major(devDependencies['@vitest/coverage-v8'])).toBe(major(devDependencies.vitest));
+  });
+
+  test('documents the workflow and how to set GitHub up for it', async () => {
+    const { read } = await generate('workflow-docs');
+
+    expect(read('docs/index.md')).toMatch(/developers\/workflow\.md\ndevelopers\/github-setup\.md\n/);
+    expect(read('docs/developers/github-setup.md')).toContain('`RELEASE_APP_CLIENT_ID`');
+    expect(read('docs/developers/github-setup.md')).toContain(
+      'git remote add origin https://github.com/Scribes-Guild/arcane-ledger.git',
+    );
+    expect(read('docs/developers/workflow.md')).toContain(
+      'https://github.com/Scribes-Guild/arcane-ledger/releases/latest/download/module.json',
+    );
+    expect(read('docs/developers/setup.md')).toContain('[](github-setup.md)');
+    expect(read('CONTRIBUTING.md')).toContain('Open a pull request against **`dev`**');
   });
 
   test('refuses to write into a directory that already has content', async () => {
@@ -342,7 +401,7 @@ describe('a JavaScript project', () => {
     expect(read('vite.config.js')).toContain("entry: './index.js'");
     expect(read('CONTRIBUTING.md')).toContain('`scripts/release/package.js` stamps the version');
     expect(read('docs/developers/setup.md')).toContain('`DEFAULTS` at the top of `vite.config.js`');
-    expect(read('.github/workflows/ci.yml')).not.toMatch(/^ {2}(typecheck|svelte-check):/m);
+    expect(read('.github/workflows/dev.yml')).not.toMatch(/^ {2}(typecheck|svelte-check):/m);
   });
 
   test('passes its own Prettier check', async () => {
@@ -398,6 +457,16 @@ describe.each(LANGUAGES.flatMap(language => UI_FRAMEWORKS.map(uiFramework => ({ 
 
       expect(read('docs/developers/why.md')).toContain('It provides nice tools (like an {{HMR}} development server)');
       expect(read('docs/developers/why.md')).toContain('## ... document with Sphinx?');
+    });
+
+    test('requires every Dev CI job to pass before CI passed does', async () => {
+      const { read } = await generate(`${name}-ci-passed`, answers);
+      const dev = read('.github/workflows/dev.yml');
+      const jobs = [...dev.slice(dev.indexOf('\njobs:')).matchAll(/^ {2}([\w-]+):$/gm)].map(match => match[1]);
+      const needs = /^ {4}needs: \[(.*)\]$/m.exec(dev)?.[1]?.split(', ');
+
+      expect(jobs.at(-1)).toBe('ci-passed');
+      expect(needs).toEqual(jobs.slice(0, -1));
     });
 
     test('passes its own Prettier check', async () => {

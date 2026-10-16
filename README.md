@@ -24,7 +24,8 @@ The generated project has no module code beyond an entry point that logs on `ini
 - ESLint, Prettier and, in a TypeScript project, type-checked lint rules and (with Svelte) `svelte-check`
 - Husky hooks, lint-staged, Commitizen and commitlint enforcing Conventional Commits
 - semantic-release, which stamps `module.json`, zips the Foundry package and publishes the GitHub release
-- GitHub Actions workflows for CI, end-to-end tests, releases and documentation
+- a `dev` → `main` pull request workflow: GitHub Actions for CI (with Codecov), end-to-end tests, releases by a GitHub
+  App, documentation, CodeQL, dependency review and Dependabot
 - Sphinx documentation (MyST Markdown, furo) built entirely inside Docker
 - a Docker Compose development Foundry VTT server with a Vite dev server in front of it
 
@@ -119,17 +120,23 @@ runs `git init` and `pnpm install` in the new project when `answers.gitInit` and
 
 ## After generating
 
-The new project's `docs/developers/setup.md` and `CONTRIBUTING.md` describe the details. In short:
+The new project's `docs/developers/github-setup.md` walks through setting up GitHub, `docs/developers/workflow.md`
+describes the workflow, and `CONTRIBUTING.md` the checks. In short:
 
 1. Copy `.foundryvtt/secrets.example.json` to `.foundryvtt/secrets.json` and fill it in to run the development server.
-2. Create the GitHub repository and add its secrets: `PERSONAL_ACCESS_TOKEN` for releases, and `FOUNDRY_USERNAME`,
-   `FOUNDRY_PASSWORD`, `FOUNDRY_LICENSE_KEY` and `FOUNDRY_ADMIN_KEY` for the end-to-end tests.
-3. Commit. The commit hooks are already active, so the first commit must be a Conventional Commit with a scope, such
+2. Commit. The commit hooks are already active, so the first commit must be a Conventional Commit with a scope, such
    as `chore(project): scaffold the module`.
+3. Create the GitHub repository, and a GitHub App for releases. Add the App's `RELEASE_APP_CLIENT_ID` variable and
+   `RELEASE_APP_PRIVATE_KEY` secret, and the `FOUNDRY_USERNAME`, `FOUNDRY_PASSWORD`, `FOUNDRY_LICENSE_KEY` and
+   `FOUNDRY_ADMIN_KEY` secrets for the end-to-end tests (`CODECOV_TOKEN` is optional).
+4. Push `main`, create `dev` from it and make `dev` the default branch.
+5. Protect both branches with rulesets that require pull requests and the **CI passed** check (plus **E2E passed** on
+   `main`), with the release App as the only bypass.
 
-Versions start at `0.x`: the release workflow tags the first commit `v0.0.0` on its first run, so the first `feat`
-commit pushed to `main` is released as `0.1.0`. If a workflow file has changed since the first commit, it tags the
-last commit that changed one instead; the project's `CONTRIBUTING.md` explains why and what to do about it.
+From then on, changes reach `dev` through pull requests, and merging `dev` into `main` releases them. Versions start at
+`0.x`: the release workflow tags the first commit `v0.0.0` on its first run, so the first `feat` commit to reach `main`
+is released as `0.1.0`. If a workflow file has changed since the first commit, it tags the last commit that changed one
+instead; the project's `CONTRIBUTING.md` explains why and what to do about it.
 
 ## How the generator works
 

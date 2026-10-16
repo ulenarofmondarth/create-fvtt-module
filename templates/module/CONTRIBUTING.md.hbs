@@ -3,10 +3,22 @@
 ## Setup
 
 ```sh
+git switch dev
 pnpm install   # also installs the git hooks (husky)
 ```
 
 The pnpm version is pinned by `packageManager` in `package.json`. The module source is {{#if typescript}}TypeScript only{{else}}JavaScript{{/if}}.
+
+## Workflow
+
+1. Create a short-lived branch from **`dev`**, named for the change: `feat/...`, `fix/...`, `docs/...`.
+2. Write a failing test first, then the change.
+3. Run the checks (below) and commit using Conventional Commits.
+4. Open a pull request against **`dev`**. The **CI passed** check must be green before it is merged.
+
+`main` only receives merges from `dev`, with a merge commit (never a squash), and each merge may produce a release.
+`docs/developers/workflow.md` describes the branches and workflows in full, and `docs/developers/github-setup.md` how to
+set up the GitHub repository for them.
 
 ## Checks
 
@@ -82,15 +94,15 @@ If the commit has already been pushed, do not amend it; push a follow-up commit 
 
 ## Releases
 
-Releases are fully automated; never bump a version or create a tag by hand. The **Release** workflow needs a
-`PERSONAL_ACCESS_TOKEN` repository secret: a token allowed to push the release commit to `main`.
+Releases are fully automated; never bump a version or create a tag by hand. To release, open a pull request from `dev`
+to `main` and merge it, with a merge commit, once **CI passed** and **E2E passed** are green.
 
-1. A push to `main` runs the **CI** workflow.
-2. When CI passes, the **Release** workflow runs [semantic-release](https://semantic-release.gitbook.io/), which reads
-   the commits since the last `v*` tag and decides the next version: `fix` → patch, `feat` → minor, `!` or
-   `BREAKING CHANGE:` → major. Other types (`docs`, `test`, `ci`, …) do not trigger a release. Versions start from
-   `0.0.0`: on its first run the workflow tags the repository's first commit `v0.0.0`, so the first `feat` is released
-   as `0.1.0`. (A `fix` before any `feat` would be `0.0.1`, and a breaking change moves to `1.0.0`.)
+1. The push to `main` runs the **Release** workflow, which first runs the whole of Dev CI.
+2. When CI passes, [semantic-release](https://semantic-release.gitbook.io/) reads the commits since the last `v*` tag
+   and decides the next version: `fix` → patch, `feat` → minor, `!` or `BREAKING CHANGE:` → major. Other types
+   (`docs`, `test`, `ci`, …) do not trigger a release. Versions start from `0.0.0`: on its first run the workflow tags
+   the repository's first commit `v0.0.0`, so the first `feat` is released as `0.1.0`. (A `fix` before any `feat`
+   would be `0.0.1`, and a breaking change moves to `1.0.0`.)
 
    If a file in `.github/workflows` has changed since the first commit, the workflow tags the last commit that
    changed one instead, and warns that the commits before it do not count towards the first release. GitHub will not
@@ -100,7 +112,11 @@ Releases are fully automated; never bump a version or create a tag by hand. The 
    and creates `releases/module-v<version>.zip`.
 4. `CHANGELOG.md`, `module.json` and `docs/conf.py` are committed back to `main` as `chore(release): <version>`, the
    commit is tagged, and a GitHub release is published with the zip and `module.json` attached.
-5. The documentation is rebuilt and deployed.
+5. The documentation is rebuilt and deployed, and `dev` is fast-forwarded to the release commit (or, if `dev` has moved
+   on, a pull request from `main` to `dev` is opened; merge it with a merge commit).
+
+The workflow pushes to the protected branches as a GitHub App, whose credentials are the `RELEASE_APP_CLIENT_ID`
+variable and the `RELEASE_APP_PRIVATE_KEY` secret.
 
 Foundry installs and updates the module from the stable manifest URL
 `{{{repoUrl}}}/releases/latest/download/module.json`.
@@ -111,7 +127,7 @@ to `module.json` and `docs/conf.py`.
 ## End-to-end tests
 
 The Playwright tests in `tests/e2e` run against a real Foundry VTT server and are meant to run in CI (the **E2E**
-workflow, on pull requests to `main` and on manual dispatch). The workflow needs four repository secrets:
+workflow, on pull requests to `main`, which are the release pull requests from `dev`, and on manual dispatch). The workflow needs four repository secrets:
 `FOUNDRY_USERNAME`, `FOUNDRY_PASSWORD`, `FOUNDRY_LICENSE_KEY` and `FOUNDRY_ADMIN_KEY`.
 
 To run them locally, export the same four variables, then:

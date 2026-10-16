@@ -1,5 +1,13 @@
+/**
+ * Dependabot writes long "bump x from y to z" messages; their format is not ours to police.
+ * @param message - A commit message
+ * @returns Whether Dependabot wrote it to update a dependency
+ */
+const isDependabot = message => /^(?:build|ci)\([\w-]+\): bump /.test(message);
+
 export default {
   extends: ['@commitlint/config-conventional'],
+  ignores: [isDependabot],
   plugins: ['commitlint-plugin-tense'],
   rules: {
     'scope-empty': [2, 'never'],
