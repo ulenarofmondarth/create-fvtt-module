@@ -7,6 +7,8 @@ services:
   foundry:
     image: felddy/foundryvtt:${VERSION}
     hostname: localhost
+    # The user Foundry VTT runs as, which must own ./data. The serve:vtt script passes its own.
+    user: ${HOST_UID:-1000}:${HOST_GID:-1000}
     volumes:
       - type: bind
         source: ./data
