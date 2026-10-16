@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { vi } from 'vitest';
 
 type AnyHookFunction = (...args: never[]) => unknown;
@@ -109,7 +110,12 @@ export function installFoundryMocks(options: FoundryMockOptions = {}) {
   const { debugHooks = false, ...gameOptions } = options;
   const hooks = createHooksMock();
   const game = createGameMock(gameOptions);
-  const ui = { notifications: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } };
+{{#if typescript}}
+  // Typed with Vitest's public `Mock`: inferred, the type names a Vitest-internal file and cannot be emitted.
+{{/if}}
+  const ui: { notifications: Record<'info' | 'warn' | 'error', Mock> } = {
+    notifications: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  };
   const config = { debug: { hooks: debugHooks } };
 
   vi.stubGlobal('Hooks', hooks);
