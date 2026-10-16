@@ -240,19 +240,13 @@ describe('the module generator', () => {
 
   test('creates the directories Docker mounts or writes into, so that they belong to the user rather than root', async () => {
     const { destination, read, json } = await generate('data-directory');
-    // The development server's and the end-to-end server's data directories: down to the point where each compose
-    // file mounts the project as a module, and the cache Foundry VTT downloads its server release into.
-    const directories = [
-      '.foundryvtt/data/Data/modules/arcane-ledger',
-      '.foundryvtt/data/container_cache',
-      'tests/e2e/.data/Data/modules/arcane-ledger',
-      'tests/e2e/.data/container_cache',
-    ];
+    // The development server's and the end-to-end server's data directories, down to the point where each compose
+    // file mounts the project as a module. Running as their owner, Foundry VTT makes the rest, such as its cache.
+    const directories = ['.foundryvtt/data/Data/modules/arcane-ledger', 'tests/e2e/.data/Data/modules/arcane-ledger'];
 
     expect(read('.foundryvtt/docker-compose.yml')).toContain('source: ./data');
     expect(read('.foundryvtt/docker-compose.yml')).toContain('target: /data/Data/modules/arcane-ledger');
     expect(read('tests/e2e/compose.yaml')).toContain('./.data:/data');
-    expect(read('tests/e2e/compose.yaml')).toContain('CONTAINER_CACHE=/data/container_cache');
     for (const relative of directories) {
       const directory = path.join(destination, relative);
       expect(fs.statSync(directory).isDirectory(), relative).toBe(true);
@@ -261,6 +255,8 @@ describe('the module generator', () => {
         expect(fs.statSync(parent).uid, parent).toBe(process.getuid?.());
       }
     }
+    expect(fs.existsSync(path.join(destination, '.foundryvtt/data/container_cache'))).toBe(false);
+    expect(fs.existsSync(path.join(destination, 'tests/e2e/.data/container_cache'))).toBe(false);
     expect(read('.gitignore')).toContain('.foundryvtt/data/');
     expect(read('.gitignore')).toContain('tests/e2e/.data/');
     // The directories are not committed, so a clone, and CI, has to make them before Docker does. The server then runs
@@ -268,10 +264,10 @@ describe('the module generator', () => {
     expect(json('package.json')).toMatchObject({
       scripts: {
         'serve:vtt':
-          'cd .foundryvtt && mkdir -p data/Data/modules/arcane-ledger data/container_cache && ' +
+          'cd .foundryvtt && mkdir -p data/Data/modules/arcane-ledger && ' +
           'HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose up -d',
         'e2e:server':
-          'mkdir -p tests/e2e/.data/Data/modules/arcane-ledger tests/e2e/.data/container_cache && ' +
+          'mkdir -p tests/e2e/.data/Data/modules/arcane-ledger && ' +
           'HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose -f tests/e2e/compose.yaml up --detach --wait --force-recreate',
       },
     });

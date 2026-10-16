@@ -75,8 +75,7 @@ jobs:
         run: pnpm run e2e:packages
 
       # The script makes the directories Docker mounts first, as the runner's user, and runs Foundry VTT as that user.
-      # Created by Docker, they would belong to root; either way Foundry VTT could not write its server download to
-      # /data/container_cache, and would hang.
+      # Created by Docker, they would belong to root; either way Foundry VTT could not write to /data, and would hang.
       - name: Start Foundry VTT
         run: pnpm run e2e:server --wait-timeout 300
 
