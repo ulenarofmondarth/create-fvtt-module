@@ -34,7 +34,8 @@ project mounted as the `{{{moduleId}}}` module.
    The server keeps its data in `.foundryvtt/data`, which is ignored by {program}`git`. The script creates the
    directory if it is missing, down to where this project is mounted inside it, along with `container_cache`, where
    Foundry VTT keeps its downloaded release, so that they belong to you: left to Docker, they would be created as
-   root, and Foundry VTT could not write to them. For the same reason, do not start a fresh clone with `docker compose up` directly.
+   root, and Foundry VTT could not write to them. It also runs Foundry VTT as you rather than as the image's own
+   user (uid 1000), for the same reason. For the same reason, do not start a fresh clone with `docker compose up` directly.
 
    If this is the first time the VTT server has been run then it will take a few seconds to become available (the Foundry VTT xip is downloaded and installed). You will also need to complete the initial setup of Foundry (accepting the license etc.).
 

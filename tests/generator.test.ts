@@ -263,18 +263,25 @@ describe('the module generator', () => {
     }
     expect(read('.gitignore')).toContain('.foundryvtt/data/');
     expect(read('.gitignore')).toContain('tests/e2e/.data/');
-    // The directories are not committed, so a clone, and CI, has to make them before Docker does.
+    // The directories are not committed, so a clone, and CI, has to make them before Docker does. The server then runs
+    // as the user who owns them; the image ignores FOUNDRY_UID and FOUNDRY_GID. A hung server is not reused.
     expect(json('package.json')).toMatchObject({
       scripts: {
         'serve:vtt':
-          'cd .foundryvtt && mkdir -p data/Data/modules/arcane-ledger data/container_cache && docker compose up -d',
+          'cd .foundryvtt && mkdir -p data/Data/modules/arcane-ledger data/container_cache && ' +
+          'HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose up -d',
         'e2e:server':
           'mkdir -p tests/e2e/.data/Data/modules/arcane-ledger tests/e2e/.data/container_cache && ' +
-          'docker compose -f tests/e2e/compose.yaml up --detach --wait',
+          'HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose -f tests/e2e/compose.yaml up --detach --wait --force-recreate',
       },
     });
+    for (const compose of ['.foundryvtt/docker-compose.yml', 'tests/e2e/compose.yaml']) {
+      expect(read(compose), compose).toContain('user: ${HOST_UID:-1000}:${HOST_GID:-1000}');
+      expect(read(compose), compose).not.toContain('- FOUNDRY_UID=');
+    }
     expect(read('.github/workflows/e2e.yml')).toContain('pnpm run e2e:server --wait-timeout 300');
     expect(read('.github/workflows/e2e.yml')).not.toContain('docker compose -f tests/e2e/compose.yaml up');
+    expect(read('.github/workflows/e2e.yml')).not.toContain('FOUNDRY_UID');
   });
 
   test('develops on dev and releases from main, as the release App', async () => {

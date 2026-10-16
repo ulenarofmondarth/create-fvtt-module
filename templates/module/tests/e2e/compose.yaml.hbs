@@ -8,13 +8,14 @@ services:
     # Keep in step with VERSION in .foundryvtt/.env.
     image: {{{concat 'felddy/foundryvtt:${FOUNDRY_VERSION:-' foundryVersion '}'}}}
     hostname: localhost
+    # The image ignores FOUNDRY_UID and FOUNDRY_GID. It runs as this user, which must own .data: the e2e:server script
+    # passes its own.
+    user: ${HOST_UID:-1000}:${HOST_GID:-1000}
     environment:
       - FOUNDRY_USERNAME
       - FOUNDRY_PASSWORD
       - FOUNDRY_LICENSE_KEY
       - FOUNDRY_ADMIN_KEY
-      - FOUNDRY_UID=${FOUNDRY_UID:-1000}
-      - FOUNDRY_GID=${FOUNDRY_GID:-1000}
       # Keeps the downloaded server release in /data/container_cache so CI can cache it between runs.
       - CONTAINER_CACHE=/data/container_cache
     volumes:

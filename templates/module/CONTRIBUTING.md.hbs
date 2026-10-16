@@ -144,7 +144,8 @@ pnpm run e2e:server:stop
 The first test run accepts the licence agreement, creates and launches a world, enables the module and creates a
 player user. Delete `tests/e2e/.data` to start again from nothing. Start the server with `pnpm run e2e:server` rather than
 `docker compose` directly: the script first creates the directories the server mounts, which Docker would otherwise
-create as root, leaving Foundry VTT unable to write its download cache and hanging.
+create as root, and runs Foundry VTT as you, so that it can write to them. Without that, Foundry VTT cannot write its
+download cache and hangs. The script replaces any server left running, so a hung one is not reused.
 
 Every test fails on an unexpected `console.error` or uncaught exception in the browser. Accepted messages go in the
 allowlist in `tests/e2e/support/fixtures.{{{ext}}}`, each with a comment explaining it.
