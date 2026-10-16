@@ -262,6 +262,11 @@ a pull request from `main` to `dev` instead; merge it with a merge commit.
 - **Codecov**: the secret `CODECOV_TOKEN` uploads the unit coverage. It is optional; without it the upload is skipped
   and CI still passes.
 
+## Supporting the project
+
+If you find this useful, you can support its development on [Patreon](https://patreon.com/Mondarth) or
+[Ko-fi](https://ko-fi.com/ulenarofmondarth).
+
 ## AI Disclosure
 
 Claude Opus 5.5 was used in part for:
