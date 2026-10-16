@@ -1,0 +1,22 @@
+name: Set up the project
+description: Installs pnpm (the version pinned in package.json), Node.js and the dependencies.
+
+inputs:
+  node-version:
+    description: The Node.js version to install.
+    required: false
+    default: 24.x
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+    - uses: actions/setup-node@v7
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
