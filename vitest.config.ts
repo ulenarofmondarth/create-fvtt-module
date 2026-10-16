@@ -12,8 +12,9 @@ export default defineConfig({
       exclude: ['scripts/smoke.ts'],
       reporter: ['text', 'html', 'lcov', 'json-summary'],
       reportsDirectory: './coverage',
-      // Set just below the measured level. Ratchet upward as tests are added; never lower them.
-      thresholds: { statements: 94, branches: 92, functions: 90, lines: 94 },
+      // Set just below the measured level. Ratchet upward as tests are added; never lower them. Re-measured for
+      // Vitest 5, whose AST-based remapping counts statements and branches more strictly than Vitest 3 did.
+      thresholds: { statements: 90, branches: 82, functions: 93, lines: 91 },
     },
   },
 });
