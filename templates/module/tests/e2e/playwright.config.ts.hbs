@@ -3,6 +3,12 @@ import { defineConfig, devices } from '@playwright/test';
 const SETUP = /.*\.setup\.{{{ext}}}/;
 
 /**
+ * Foundry VTT logs a console error, which fails the test, in a window smaller than 1024x768; the desktop device
+ * presets are 1280x720.
+ */
+const VIEWPORT = { width: 1280, height: 800 };
+
+/**
  * End-to-end tests against a real Foundry VTT server (see `compose.yaml`). They are meant to run in CI: one browser
  * project per runner, each with its own freshly started server.
  */
@@ -31,9 +37,16 @@ export default defineConfig({
   },
   projects: [
     // Accepts the licence agreement, creates and launches the test world and enables the modules.
-    { name: 'setup', testMatch: SETUP, use: { ...devices['Desktop Chrome'] } },
-    { name: 'chromium', testIgnore: SETUP, dependencies: ['setup'], use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', testIgnore: SETUP, dependencies: ['setup'], use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', testIgnore: SETUP, dependencies: ['setup'], use: { ...devices['Desktop Safari'] } },
+    { name: 'setup', testMatch: SETUP, use: { ...devices['Desktop Chrome'], viewport: VIEWPORT } },
+    { name: 'chromium', testIgnore: SETUP, dependencies: ['setup'], use: { ...devices['Desktop Chrome'], viewport: VIEWPORT } },
+    // Headless Firefox cannot create the WebGL context Foundry VTT needs. Headed, it renders WebGL in software, so it
+    // opens a window; CI gives it a virtual display (xvfb-run in .github/workflows/e2e.yml).
+    {
+      name: 'firefox',
+      testIgnore: SETUP,
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Firefox'], viewport: VIEWPORT, headless: false },
+    },
+    { name: 'webkit', testIgnore: SETUP, dependencies: ['setup'], use: { ...devices['Desktop Safari'], viewport: VIEWPORT } },
   ],
 });

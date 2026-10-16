@@ -6,7 +6,8 @@ import { joinAs, MODULE_ID, USERS, waitForReady, WORLD } from '../support/foundr
  * Take a freshly started Foundry server to a launched world with the module under test enabled.
  *
  * Every step is skipped when it has already happened, so the setup can be re-run against the same server. Locators
- * follow Foundry's own v14 templates (licence form, admin authentication, setup screen, world configuration).
+ * follow Foundry's own v14 templates (licence form, admin authentication, setup screen, and the world creation page,
+ * `templates/setup/create/config.hbs`).
  */
 setup('prepare the Foundry world', async ({ page }) => {
   setup.setTimeout(300_000);
@@ -36,18 +37,22 @@ setup('prepare the Foundry world', async ({ page }) => {
     const worldTile = page.locator(`[data-package-id="${WORLD.id}"]`);
 
     if ((await worldTile.count()) === 0) {
+      // v14 creates worlds on a page of their own, and launches the new world straight away. On its first launch it
+      // opens the player configuration page; any later visit to /join leaves that.
       await page.getByRole('button', { name: 'Create World' }).click();
-      const worldForm = page.locator('form:has(input[name="id"])');
+      await page.waitForURL('**/create');
+      const worldForm = page.locator('form#world-create');
       await worldForm.locator('input[name="title"]').fill(WORLD.title);
-      await worldForm.locator('input[name="id"]').fill(WORLD.id);
+      // Named world-id rather than id, which would shadow the form's own id property.
+      await worldForm.locator('input[name="world-id"]').fill(WORLD.id);
       await worldForm.locator('select[name="system"]').selectOption(WORLD.system);
       await worldForm.locator('button[type="submit"]').click();
-      await expect(worldTile).toBeVisible();
+      await page.waitForURL(/\/(players|join|game)/, { timeout: 120_000 });
+    } else {
+      await worldTile.hover();
+      await worldTile.locator('[data-action="worldLaunch"]').click();
+      await page.waitForURL('**/join');
     }
-
-    await worldTile.hover();
-    await worldTile.locator('[data-action="worldLaunch"]').click();
-    await page.waitForURL('**/join');
   }
 
   // 4. Enable the module (and any modules it requires) and create a player to test non-GM behaviour with.

@@ -79,8 +79,9 @@ jobs:
       - name: Start Foundry VTT
         run: pnpm run e2e:server --wait-timeout 300
 
+      # Firefox runs headed, for WebGL (see playwright.config.{{{ext}}}), so it needs a display.
       - name: Run Playwright
-        run: pnpm run test:e2e --project=$\{{ matrix.browser }}
+        run: xvfb-run --auto-servernum pnpm run test:e2e --project=$\{{ matrix.browser }}
 
       - name: Foundry VTT logs
         if: $\{{ failure() }}
