@@ -212,6 +212,29 @@ describe('the module generator', () => {
     }
   });
 
+  test('drives the Foundry VTT v14 world creation and join screens in the end-to-end setup', async () => {
+    const { read } = await generate('e2e-v14');
+    const setup = read('tests/e2e/setup/bootstrap.setup.ts');
+    const support = read('tests/e2e/support/foundry.ts');
+
+    // v14 creates worlds on its own /create page, names the id field world-id, and launches the world on creation.
+    expect(setup).toContain("await page.waitForURL('**/create');");
+    expect(setup).toContain('form#world-create');
+    expect(setup).toContain('input[name="world-id"]');
+    expect(setup).not.toContain('input[name="id"]');
+    expect(setup).toMatch(/waitForURL\(\/\\\/\(players\|join\|game\)\//);
+    // The join form takes a typed user name rather than offering a select.
+    expect(support).toContain('input[name="username"]');
+    expect(support).not.toContain('select[name="userid"]');
+    // Foundry logs a console error below 1024x768, and the desktop device presets are 1280x720.
+    const config = read('tests/e2e/playwright.config.ts');
+    expect(config).toContain('const VIEWPORT = { width: 1280, height: 800 };');
+    expect(config.match(/viewport: VIEWPORT/g)).toHaveLength(4);
+    // Headless Firefox has no WebGL, which Foundry VTT needs; headed on a virtual display, it renders in software.
+    expect(config).toMatch(/name: 'firefox',[^}]*headless: false/);
+    expect(read('.github/workflows/e2e.yml')).toContain('run: xvfb-run --auto-servernum pnpm run test:e2e');
+  });
+
   test('writes special characters as valid JSON, TypeScript and Python literals', async () => {
     const title = `Tarn's "Odd" & <Ends>`;
     const { read, json } = await generate('escaping', { moduleTitle: title, authorName: "Tarn O'Odd" });
@@ -237,6 +260,25 @@ describe('the module generator', () => {
       expect(fs.statSync(path.join(destination, '.husky', hook)).mode & 0o111, hook).not.toBe(0);
     }
   });
+
+  // setsid detaches the hook from any controlling terminal, as an IDE, a script or an agent commits.
+  test.skipIf(process.platform !== 'linux')(
+    'lets commits made without a terminal through prepare-commit-msg',
+    async () => {
+      const { destination } = await generate('headless-commit');
+      const message = path.join(destination, '.git-commit-message');
+      fs.writeFileSync(message, 'fix(core): mend a thing\n');
+
+      // Husky runs hooks with `sh -e`; `git commit -m` passes the message file and "message" as the source.
+      expect(() =>
+        execFileSync('setsid', ['--wait', 'sh', '-e', '.husky/prepare-commit-msg', message, 'message'], {
+          cwd: destination,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        }),
+      ).not.toThrow();
+      expect(fs.readFileSync(message, 'utf8')).toBe('fix(core): mend a thing\n');
+    },
+  );
 
   test('creates the directories Docker mounts or writes into, so that they belong to the user rather than root', async () => {
     const { destination, read, json } = await generate('data-directory');
