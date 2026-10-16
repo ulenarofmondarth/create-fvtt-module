@@ -1,7 +1,8 @@
 # create-fvtt-module
 
-[![CI](https://github.com/ulenarofmondarth/create-fvtt-module/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ulenarofmondarth/create-fvtt-module/actions/workflows/ci.yml)
+[![Dev CI](https://github.com/ulenarofmondarth/create-fvtt-module/actions/workflows/dev.yml/badge.svg?branch=dev)](https://github.com/ulenarofmondarth/create-fvtt-module/actions/workflows/dev.yml)
 [![Release](https://github.com/ulenarofmondarth/create-fvtt-module/actions/workflows/release.yml/badge.svg)](https://github.com/ulenarofmondarth/create-fvtt-module/actions/workflows/release.yml)
+[![codecov](https://codecov.io/gh/ulenarofmondarth/create-fvtt-module/branch/dev/graph/badge.svg)](https://codecov.io/gh/ulenarofmondarth/create-fvtt-module)
 [![npm version](https://img.shields.io/npm/v/@mondarth/create-fvtt-module)](https://www.npmjs.com/package/@mondarth/create-fvtt-module)
 [![Node.js version](https://img.shields.io/node/v/@mondarth/create-fvtt-module)](package.json)
 [![Foundry VTT version](https://img.shields.io/badge/Foundry%20VTT-v14%2B-ff6400)](https://foundryvtt.com)
@@ -232,14 +233,34 @@ published package contains the compiled `dist/` and the `templates/` only.
 
 ## Releasing
 
-Commits follow [Conventional Commits](https://www.conventionalcommits.org), enforced by a commit hook, with a
-mandatory scope. Every push to `main` that passes CI runs semantic-release, which works out the version from the
-commits (`fix` → patch, `feat` → minor, `!` or `BREAKING CHANGE:` → major), publishes to npm, writes `CHANGELOG.md`,
-commits it with the new version, and creates the GitHub release.
+Work lands on `dev` through pull requests; `main` only receives merges from `dev` (with a merge commit, never a
+squash), and each merge may produce a release. Commits follow [Conventional Commits](https://www.conventionalcommits.org),
+enforced by a commit hook and again in CI, with a mandatory scope.
 
-Publishing uses npm [trusted publishing](https://docs.npmjs.com/trusted-publishers): the registry accepts the identity
-of `.github/workflows/release.yml` in place of a token. The repository needs one secret, `PERSONAL_ACCESS_TOKEN`, with
-which the release commit is pushed to `main`.
+| Workflow                                    | Runs on                                          | Does                                                                                                       |
+| ------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Dev CI (`dev.yml`)                          | pushes to `dev`, pull requests, release          | commit messages, typecheck, format, build, unit tests with the coverage gate (to Codecov), the smoke tests |
+| Release (`release.yml`)                     | pushes to `main`, by hand                        | Dev CI, then semantic-release; then fast-forwards `dev` onto the release commit                            |
+| CodeQL (`codeql.yml`)                       | pushes and pull requests to `dev`/`main`, weekly | code scanning of the TypeScript and of the workflows                                                       |
+| Dependency review (`dependency-review.yml`) | pull requests                                    | fails pull requests that add vulnerable dependencies                                                       |
+
+**CI passed** is the single check to require in branch protection. semantic-release works out the version from the
+commits (`fix` → patch, `feat` → minor, `!` or `BREAKING CHANGE:` → major), publishes to npm, writes `CHANGELOG.md`,
+commits it with the new version, and creates the GitHub release. If `dev` cannot be fast-forwarded, the workflow opens
+a pull request from `main` to `dev` instead; merge it with a merge commit.
+
+### GitHub setup
+
+- **Branches**: `dev`, created from `main`, is the default branch. A ruleset on `dev` and `main` requires a pull request
+  (0 approvals, merge commits allowed) and the **CI passed** check, and lets only the release App bypass it.
+- **Release App**: semantic-release and the _Bring dev up to date_ job push to the protected branches as a GitHub App
+  with **Contents**, **Pull requests** and **Issues** read and write, installed on this repository and on the rulesets'
+  bypass list. Its Client ID is the variable `RELEASE_APP_CLIENT_ID` and its private key the secret
+  `RELEASE_APP_PRIVATE_KEY`.
+- **npm**: publishing uses [trusted publishing](https://docs.npmjs.com/trusted-publishers): the registry accepts the
+  identity of `.github/workflows/release.yml` in place of a token.
+- **Codecov**: the secret `CODECOV_TOKEN` uploads the unit coverage. It is optional; without it the upload is skipped
+  and CI still passes.
 
 ## AI Disclosure
 
