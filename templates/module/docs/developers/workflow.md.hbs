@@ -128,7 +128,7 @@ there are releasable commits.
 
 Dependabot checks weekly for updates to the npm packages, the GitHub Actions, the documentation's Python requirements
 and its Docker image, and raises them as pull requests against `dev`. Related packages are grouped into one pull
-request (Vitest, the commit tooling, semantic-release). Review and merge them like any other pull request; they reach
+request ({{#if svelte}}Vite and its Svelte plugin, {{/if}}Vitest, the commit tooling, semantic-release). Review and merge them like any other pull request; they reach
 users with the next release.
 
 Major updates of `conventional-changelog-conventionalcommits` are ignored: version 10 needs a newer
