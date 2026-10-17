@@ -232,7 +232,27 @@ describe('the module generator', () => {
     expect(config.match(/viewport: VIEWPORT/g)).toHaveLength(4);
     // Headless Firefox has no WebGL, which Foundry VTT needs; headed on a virtual display, it renders in software.
     expect(config).toMatch(/name: 'firefox',[^}]*headless: false/);
-    expect(read('.github/workflows/e2e.yml')).toContain('run: xvfb-run --auto-servernum pnpm run test:e2e');
+    expect(read('.github/workflows/e2e.yml')).toContain('run: pnpm run test:e2e:xvfb --project=');
+  });
+
+  test('gives headed Firefox a virtual display wherever there is no desktop session, not only in CI', async () => {
+    const { read, json } = await generate('e2e-xvfb');
+
+    // Over SSH or in a container there is no DISPLAY for Firefox's window. xvfb-run's default screen is 1280x1024 at
+    // 8 bits per pixel: barely wider than the viewport, before the browser's frame, and a poor base for WebGL.
+    expect(json('package.json')).toMatchObject({
+      scripts: {
+        'test:e2e:xvfb':
+          'xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" ' +
+          'playwright test --config tests/e2e/playwright.config.ts',
+      },
+    });
+    expect(read('.github/workflows/e2e.yml')).not.toContain('xvfb-run');
+    expect(read('tests/e2e/playwright.config.ts')).toContain('pnpm test:e2e:xvfb');
+    // xvfb-run needs xauth, which Debian's xvfb package only recommends.
+    expect(read('CONTRIBUTING.md')).toContain('pnpm run test:e2e:xvfb');
+    expect(read('CONTRIBUTING.md')).toContain('sudo apt-get install xvfb xauth');
+    expect(read('docs/developers/prerequisites.md')).toContain('sudo apt-get install xvfb xauth');
   });
 
   test('writes special characters as valid JSON, TypeScript and Python literals', async () => {
