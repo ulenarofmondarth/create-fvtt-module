@@ -79,9 +79,10 @@ jobs:
       - name: Start Foundry VTT
         run: pnpm run e2e:server --wait-timeout 300
 
-      # Firefox runs headed, for WebGL (see playwright.config.{{{ext}}}), so it needs a display.
+      # Firefox runs headed, for WebGL (see playwright.config.{{{ext}}}), so it needs a display: the script gives it a
+      # virtual 1920x1080 one, comfortably larger than the 1280x800 viewport plus the browser's frame.
       - name: Run Playwright
-        run: xvfb-run --auto-servernum pnpm run test:e2e --project=$\{{ matrix.browser }}
+        run: pnpm run test:e2e:xvfb --project=$\{{ matrix.browser }}
 
       - name: Foundry VTT logs
         if: $\{{ failure() }}

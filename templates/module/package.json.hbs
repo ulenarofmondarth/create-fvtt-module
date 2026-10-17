@@ -32,6 +32,7 @@
 {{/if}}
     "test:coverage": "vitest --run --coverage",
     "test:e2e": "playwright test --config tests/e2e/playwright.config.{{{ext}}}",
+    "test:e2e:xvfb": "xvfb-run --auto-servernum --server-args=\"-screen 0 1920x1080x24\" playwright test --config tests/e2e/playwright.config.{{{ext}}}",
     "e2e:packages": "node scripts/e2e/install-packages.{{{ext}}}",
     "e2e:server": "mkdir -p tests/e2e/.data/Data/modules/{{{moduleId}}} && HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose -f tests/e2e/compose.yaml up --detach --wait --force-recreate",
     "e2e:server:stop": "docker compose -f tests/e2e/compose.yaml down",
