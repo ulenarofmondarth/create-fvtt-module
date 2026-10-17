@@ -5,5 +5,8 @@
     "rootDir": ".",
     "resolveJsonModule": true
   },
-  "include": ["src/**/*", "tests/**/*"]
+  "include": ["src/**/*", "tests/**/*"],
+  // Replaces, rather than adds to, the excludes of tsconfig.json. Typed linting takes JS into the program too, and
+  // Playwright's report bundles JS that declares globals such as `ui`, hiding Foundry's.
+  "exclude": ["./node_modules/*", "tests/e2e/.data", "tests/e2e/test-results", "tests/e2e/playwright-report"]
 }
