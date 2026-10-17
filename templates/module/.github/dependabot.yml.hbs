@@ -48,6 +48,13 @@ updates:
         update-types:
           - version-update:semver-major
     groups:
+{{#if svelte}}
+      # Each major of the Svelte plugin supports only one major of Vite, so the two have to move together.
+      vite:
+        patterns:
+          - vite
+          - '@sveltejs/vite-plugin-svelte'
+{{/if}}
       vitest:
         patterns:
           - vitest
