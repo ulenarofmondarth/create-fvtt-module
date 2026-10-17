@@ -562,6 +562,17 @@ describe.each(LANGUAGES.flatMap(language => UI_FRAMEWORKS.map(uiFramework => ({ 
       expect(config).not.toMatch(/esbuild|rollupOptions|optimizeDeps|__dirname/);
     });
 
+    test('allows build scripts only for packages its lockfile installs', async () => {
+      const { read } = await generate(`${name}-builds`, answers);
+      const workspace = read('pnpm-workspace.yaml');
+      const lockfile = read('pnpm-lock.yaml');
+      const allowed = [...workspace.matchAll(/^ {2}"?(@?[^@":\s]+).*: true$/gm)].map(match => match[1] ?? '');
+
+      // An empty `allowBuilds:` would be null rather than an empty map.
+      expect(workspace.includes('allowBuilds:')).toBe(allowed.length > 0);
+      for (const pkg of allowed) expect(lockfile, pkg).toMatch(new RegExp(`^ {2}'?${pkg}@`, 'm'));
+    });
+
     test('depends on nothing of the frameworks it was not set up for', async () => {
       const { json, read } = await generate(`${name}-dependencies`, answers);
       const manifest = json('package.json') as { scripts: Record<string, string>; devDependencies: object };
