@@ -14,6 +14,8 @@ Creates a complete, working project for a Foundry VTT module (version 14 and lat
 pnpm create @mondarth/fvtt-module
 ```
 
+**Note:** There is a default 24 hrs delay on accessing modules uploaded to `npmjs.org`. Just pin the sepcific verson if you are unsure, e.g. `pnpm create @mondarth/fvtt-module@0.4.2`.
+
 The generated project has no module code beyond an entry point that logs on `init`. What it has is the tooling:
 
 - strict TypeScript with the League `fvtt-types`, or plain JavaScript if you prefer, bundled by Vite into one ES
