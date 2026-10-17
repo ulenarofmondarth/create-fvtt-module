@@ -281,6 +281,19 @@ describe('the module generator', () => {
     }
   });
 
+  test('keeps ESLint and Prettier out of the local server, which mounts the project inside its own data', async () => {
+    const { destination, read } = await generate('server-ignored');
+    // serve:vtt mounts the project at .foundryvtt/data/Data/modules/arcane-ledger, so each tool would find the project
+    // again in there, without end.
+    const mounted = path.join(destination, '.foundryvtt/data/Data/modules/arcane-ledger/src/index.ts');
+    fs.mkdirSync(path.dirname(mounted), { recursive: true });
+    fs.writeFileSync(mounted, 'export {};\n');
+
+    const info = await prettier.getFileInfo(mounted, { ignorePath: path.join(destination, '.prettierignore') });
+    expect(info.ignored).toBe(true);
+    expect(read('eslint.config.mjs')).toMatch(/ignores: \[[^\]]*'\.foundryvtt\/'/);
+  });
+
   // setsid detaches the hook from any controlling terminal, as an IDE, a script or an agent commits.
   test.skipIf(process.platform !== 'linux')(
     'lets commits made without a terminal through prepare-commit-msg',
