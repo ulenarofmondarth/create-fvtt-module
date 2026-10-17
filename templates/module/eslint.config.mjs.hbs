@@ -22,6 +22,8 @@ const foundry = Object.fromEntries(
 export default defineConfig(
   {
     ignores: [
+      // The local Foundry VTT server; its data mounts this project inside itself.
+      '.foundryvtt/',
       '.vite-cache/',
       'coverage/',
       'dist/',

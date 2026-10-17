@@ -1,5 +1,7 @@
 /dist
 /coverage
+# The local Foundry VTT server; its data mounts this project inside itself
+/.foundryvtt/data
 # MyST Markdown uses syntax (definition lists, colon fences) that Prettier would rewrite
 /docs
 /releases
