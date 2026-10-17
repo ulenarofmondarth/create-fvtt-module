@@ -273,6 +273,24 @@ describe('the module generator', () => {
     expect(await unformattedFiles(destination)).toEqual([]);
   });
 
+  test('keeps the end-to-end tests’ data and Playwright’s output out of the type-checked tests', async () => {
+    const { read } = await generate('test-tsconfig');
+    // The file has whole-line comments only, which JSON does not allow.
+    const tsconfig = JSON.parse(
+      read('tsconfig.test.json')
+        .split('\n')
+        .filter(line => !line.trimStart().startsWith('//'))
+        .join('\n'),
+    ) as { include: string[]; exclude?: string[] };
+
+    // For typed linting, `tests/**/*` takes in Playwright's report, whose bundled JS declares globals such as `ui`
+    // that hide Foundry's.
+    expect(tsconfig.include).toContain('tests/**/*');
+    expect(tsconfig.exclude).toEqual(
+      expect.arrayContaining(['tests/e2e/.data', 'tests/e2e/test-results', 'tests/e2e/playwright-report']),
+    );
+  });
+
   test('keeps the git hooks executable', async () => {
     const { destination } = await generate('modes');
 
