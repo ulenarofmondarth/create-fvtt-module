@@ -114,7 +114,7 @@ importers:
         version: 8.7.3(@types/node@26.6.5)
       amaro:
         specifier: ^1.2.1
-        version: 1.2.1
+        version: 1.2.2
       handlebars:
         specifier: ^4.7.10
         version: 4.7.10
@@ -1073,8 +1073,8 @@ packages:
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
 
-  amaro@1.2.1:
-    resolution: {integrity: sha512-RXNB1/mbpbpwr4mVlQgYZVdY4CHl7rFExwov+XOTWfghpsM1s2sD/5u4oTQkKL4Pt0BGNIExSVjRcLMjcytIDQ==}
+  amaro@1.2.2:
+    resolution: {integrity: sha512-H1ReZZ8Te6HHaWAy9171A/iWkGZOusKCtdzmh6EnTgluiNiAV9OSmUIN5rZI1TZnw6+NAUNz+n6pAWoJAHhRIQ==}
     engines: {node: '>=22'}
 
   ansi-escapes@4.3.2:
@@ -3396,7 +3396,7 @@ snapshots:
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
-  amaro@1.2.1: {}
+  amaro@1.2.2: {}
 
   ansi-escapes@4.3.2:
     dependencies:
